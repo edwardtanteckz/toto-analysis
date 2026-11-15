@@ -12,6 +12,9 @@ Exploratory analysis of Singapore Pools **TOTO** (6/49) and **4D** results:
     counts, so a win is shared with fewer people), *Typical profile*, *Bayesian posterior*.
   - 4D: *Most common pattern*, *Bayesian digit posterior*, *Pure random*.
   - The odds are identical for every set: TOTO jackpot 1 in 13,983,816, 4D any prize 1 in 435 (Big bet).
+  - **How lucky are the picks?** Every stored pick is compared with the actual draw: prizes won vs expected,
+    luck percentile, matched numbers vs the exact expected distribution (4D: closest near-miss across all 23
+    winning numbers), running profit/loss per lens at $1 per set, and a per-draw table with hits highlighted.
 - An interactive, self-contained **WebGL** report (`reports/eda.html`) that asks “is it random?” using:
   - **Monte Carlo baseline**: 10,000 simulated fair histories of the same length. These give bands on the charts and empirical p-values.
   - **Bayesian Dirichlet–multinomial**: per-number posterior + 95% credible intervals, plus Bayes factors (fair vs biased).

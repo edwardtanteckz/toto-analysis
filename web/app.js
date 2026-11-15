@@ -368,5 +368,94 @@
     };
   });
 
+  // ================================================================ LUCK: stored picks vs actual draws
+  const LENS_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+  function binomCdf(k, n, p) { // P(X <= k)
+    if (k < 0) return 0;
+    let pmf = Math.pow(1 - p, n), cdf = pmf;
+    for (let i = 1; i <= Math.min(k, n); i++) { pmf *= ((n - i + 1) / i) * (p / (1 - p)); cdf += pmf; }
+    return Math.min(1, cdf);
+  }
+
+  function luckSection(game, prefix) {
+    const isToto = game === "toto";
+    const G = PK[game], H = G.history;
+    const pAny = isToto ? PK.p_toto_any : PK.p_4d_any;
+    const card = $(prefix + "k-tiles").closest(".card");
+    if (!H.length) {
+      $(prefix + "k-tiles").innerHTML = `<p class="muted" style="grid-column:1/-1">Your record starts after ${G.next ? longDate(G.next.date) : "the next draw"}. ` +
+        `Each morning after a draw, the picks are scored against the actual result and this section fills in.</p>`;
+      card.querySelector(".luck-grid").hidden = true;
+      const wrap = $(prefix + "k-table").parentElement;  // .table-scroll
+      wrap.hidden = true;
+      if (wrap.previousElementSibling) wrap.previousElementSibling.hidden = true;
+      return;
+    }
+    const lensNames = H[H.length - 1].sets.map((s) => s.lens);
+    const sets = H.flatMap((h) => h.sets);
+    const n = sets.length, prizes = sets.filter((s) => s.amount > 0).length;
+    const won = sets.reduce((a, s) => a + s.amount, 0), exp = n * pAny;
+    const pct = binomCdf(prizes - 1, n, pAny) * 100;
+    const pAtLeast = 1 - binomCdf(prizes - 1, n, pAny);
+    $(prefix + "k-tiles").innerHTML = `
+      <div><div class="v">${fmt(n)}</div><div class="l">${isToto ? "sets" : "numbers"} over ${fmt(H.length)} draw${H.length === 1 ? "" : "s"}</div></div>
+      <div><div class="v">${fmt(prizes)} <span class="muted" style="font-size:14px">vs ${fmt(exp, 2)}</span></div><div class="l">prizes won vs expected for random tickets</div></div>
+      <div><div class="v">${fmt(pct, 0)}%</div><div class="l">luck percentile: random players who'd have won fewer prizes (P(≥${prizes}) = ${fmtP(pAtLeast)})</div></div>
+      <div><div class="v">${won - n >= 0 ? "+" : "−"}$${fmt(Math.abs(won - n))}</div><div class="l">net: won $${fmt(won)} on $${fmt(n)} spent</div></div>`;
+
+    $(prefix + "k-dist-title").textContent = isToto
+      ? "Winning numbers matched per set vs expected (3+ wins a prize)"
+      : "Closest near-miss: most digits in the right position vs any of the 23 winning numbers";
+    W.chart($("c-" + prefix + "k-dist"), () => {
+      const pmf = isToto ? PK.toto_match_pmf : PK.fourd_best_pmf;
+      const obs = pmf.map((_, k) => sets.filter((s) => (isToto ? s.matched : s.best_match) === k).length);
+      return observedVsExpected(pmf.map((_, k) => String(k)), obs, pmf.map((p) => p * n),
+        { xTitle: isToto ? "numbers matched" : "digits in the right position (4 = exact hit)", yTitle: isToto ? "sets" : "numbers" });
+    });
+
+    W.chart($("c-" + prefix + "k-pnl"), () => {
+      const cum = lensNames.map(() => [0]);
+      H.forEach((h) => h.sets.forEach((s, i) => { const c = cum[i]; if (c) c.push(c[c.length - 1] + s.amount - 1); }));
+      const vals = cum.flat();
+      const lo = Math.min(...vals, 0), hi = Math.max(...vals, 0);
+      const pad = Math.max((hi - lo) * 0.08, 1);
+      const step = Math.max(1, Math.ceil(H.length / 6));
+      return {
+        x: [0, Math.max(H.length, 1)], y: [lo - pad, hi + pad], height: 260, aria: "Running profit and loss per lens",
+        xTicks: H.map((h, i) => ({ v: i + 1, label: h.date.slice(5) })).filter((_, i) => i % step === 0),
+        yTicks: W.niceTicks(lo - pad, hi + pad, 5, (v) => {
+          const a = Math.abs(v), sgn = v < 0 ? "−$" : "$";
+          return sgn + (a >= 1e6 ? fmt(a / 1e6, 1) + "M" : a >= 1e4 ? fmt(a / 1e3, 0) + "k" : fmt(a));
+        }), yTitle: "net $",
+        marks: [
+          { type: "hline", y: 0, color: "var(--text-3)", width: 1 },
+          ...cum.map((c, i) => ({ type: "line", points: c.map((v, k) => [k, v]), color: LENS_COLORS[i], width: 2, dots: H.length <= 30,
+            tips: i === 0 ? c.map((_, k) => `<b>${k ? H[k - 1].date : "Start"}</b><br>` +
+              lensNames.map((l, j) => `${l}: ${cum[j][k] < 0 ? "−$" : "$"}${fmt(Math.abs(cum[j][k]))}`).join("<br>")) : null })),
+        ],
+        legend: lensNames.map((l, i) => ({ label: l, color: LENS_COLORS[i], kind: "line" })),
+      };
+    });
+
+    const rows = H.slice().reverse().map((h) => {
+      const actual = isToto
+        ? `${totoBalls(h.nums, false)} <span class="ball add">${h.add}</span>`
+        : `<span class="digits" style="font-size:16px">${h.first || "–"}</span><div class="muted">1st prize (all 23 checked)</div>`;
+      const cells = h.sets.map((s) => {
+        const tag = s.amount > 0
+          ? `<span class="prize-tag won">${isToto ? "Group " + s.group : s.category} · ${money(s.amount)}</span>`
+          : `<span class="prize-tag">${isToto ? s.matched + (s.add ? " + add" : "") + " matched" : s.best_match + "/4 vs " + s.closest + " (" + s.closest_cat + ")"}</span>`;
+        const nums = isToto ? totoBalls(s.numbers, false, h.nums, h.add)
+          : `<span class="digits" style="font-size:16px">${[...s.numbers].map((ch, i) => s.closest && s.closest[i] === ch ? `<span class="digit-hit">${ch}</span>` : ch).join("")}</span>`;
+        return `<td>${nums}<div>${tag}</div></td>`;
+      }).join("");
+      return `<tr><td>${h.date}<div class="muted">Draw ${h.no}</div></td><td>${actual}</td>${cells}</tr>`;
+    }).join("");
+    $(prefix + "k-table").innerHTML = `<thead><tr><th>Draw</th><th>Actual result</th>` +
+      lensNames.map((l, i) => `<th><span class="lg"><i style="--c:${LENS_COLORS[i]}"></i>${l}</span></th>`).join("") + `</tr></thead><tbody>${rows}</tbody>`;
+  }
+  luckSection("toto", "t");
+  luckSection("fourd", "f");
+
   W.renderAll();
 })();

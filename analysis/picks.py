@@ -39,7 +39,7 @@ def _prior() -> np.ndarray:
 
 
 # ---------------------------------------------------------------- popularity model
-def popularity_model(conn: sqlite3.Connection) -> dict:
+def popularity_model(conn: sqlite3.Connection, before: date | None = None) -> dict:
     """Estimate how popular each number is with players from Singapore Pools' winning-share counts.
 
     For each draw, shares won in Group 5 (4 numbers) + Group 7 (3 numbers) rise when the drawn
@@ -52,7 +52,8 @@ def popularity_model(conn: sqlite3.Connection) -> dict:
         FROM toto_draws d
         JOIN toto_prizes p5 ON p5.draw_no=d.draw_no AND p5.prize_group=5
         JOIN toto_prizes p7 ON p7.draw_no=d.draw_no AND p7.prize_group=7
-        WHERE p5.winning_shares IS NOT NULL AND p7.winning_shares IS NOT NULL""").fetchall()
+        WHERE p5.winning_shares IS NOT NULL AND p7.winning_shares IS NOT NULL AND d.draw_date < ?""",
+        ((before or date.max).isoformat(),)).fetchall()
     prior = _prior()
     if len(rows) < 60:
         return {"coef": prior.tolist(), "source": "prior", "cv_gain": None, "n": len(rows)}
@@ -125,6 +126,33 @@ def _pattern_penalty(nums, last_draw: set[int]) -> float:
     return pen
 
 
+def _pattern_penalties(combos: np.ndarray, last_draw: set[int]) -> np.ndarray:
+    """Vectorised _pattern_penalty for sorted combos (M,6)."""
+    d = np.diff(combos, axis=1)
+    pen = np.zeros(len(combos))
+    pen += 0.15 * ((d[:, :-1] == 1) & (d[:, 1:] == 1)).any(1)
+    pen += 0.3 * (d == d[:, :1]).all(1)
+    dec = (combos - 1) // 10
+    pen += 0.1 * (dec == dec[:, :1]).all(1)
+    pen += 0.2 * np.any([(combos % k == 0).all(1) for k in range(2, 8)], axis=0)
+    pen += 0.1 * (combos[:, -1] <= 31)
+    if last_draw:
+        pen += 0.05 * np.isin(combos, list(last_draw)).sum(1)
+    return pen
+
+
+_SUM_Q: tuple[float, float] | None = None
+
+
+def _typical_sum_range() -> tuple[float, float]:
+    global _SUM_Q
+    if _SUM_Q is None:
+        sim = np.sort(np.argpartition(np.random.default_rng(1).random((100_000, 49)), 6, axis=1)[:, :6] + 1, axis=1).sum(1)
+        lo, hi = np.quantile(sim, [0.25, 0.75])
+        _SUM_Q = (float(lo), float(hi))
+    return _SUM_Q
+
+
 def _overlap_ok(cand, chosen, max_overlap=2) -> bool:
     return all(len(set(cand) & set(c)) <= max_overlap for c in chosen)
 
@@ -132,28 +160,27 @@ def _overlap_ok(cand, chosen, max_overlap=2) -> bool:
 # ---------------------------------------------------------------- TOTO lenses
 def _toto_sets(conn, draw_date: date, salt: int) -> list[dict]:
     rng = _rng("toto", draw_date, salt)
-    draws = stats.load_toto(conn)
+    draws = [d for d in stats.load_toto(conn) if d["draw_date"] < draw_date.isoformat()]  # only what was known before
     last = {draws[-1][f"n{i}"] for i in range(1, 7)} if draws else set()
     counts = np.zeros(49)
     for d in draws:
         for i in range(1, 7):
             counts[d[f"n{i}"] - 1] += 1
-    pop = popularity_model(conn)
+    pop = popularity_model(conn, before=draw_date)
     coef = np.array(pop["coef"])
     chosen: list[list[int]] = []
 
     # 1) anti-popular: sample 50k combos, pick randomly among the least popular 1%
     keys = rng.random((50_000, 49))
     combos = np.sort(np.argpartition(keys, 6, axis=1)[:, :6] + 1, axis=1)
-    score = coef[combos - 1].sum(1) + np.array([_pattern_penalty(c, last) for c in combos])
+    score = coef[combos - 1].sum(1) + _pattern_penalties(combos, last)
     pool = combos[np.argsort(score)[:500]]
     anti = sorted(int(x) for x in pool[rng.integers(len(pool))])
     chosen.append(anti)
     src = "Singapore Pools winning-share data + birthday/lucky-number prior" if pop["source"] != "prior" else "birthday/lucky-number prior"
 
     # 2) typical profile: the most common shape of a fair draw
-    sim = np.sort(np.argpartition(np.random.default_rng(1).random((100_000, 49)), 6, axis=1)[:, :6] + 1, axis=1).sum(1)
-    lo, hi = np.quantile(sim, [0.25, 0.75])
+    lo, hi = _typical_sum_range()
     while True:
         c = sorted(int(x) for x in rng.choice(49, 6, replace=False) + 1)
         odd = sum(n % 2 for n in c)
@@ -185,7 +212,7 @@ def _toto_sets(conn, draw_date: date, salt: int) -> list[dict]:
 # ---------------------------------------------------------------- 4D lenses
 def _fourd_sets(conn, draw_date: date, salt: int) -> list[dict]:
     rng = _rng("4d", draw_date, salt)
-    draws = stats.load_fourd(conn)
+    draws = [d for d in stats.load_fourd(conn) if d["draw_date"] < draw_date.isoformat()]
     digits = np.array([[int(ch) for ch in n] for d in draws for _, n in d["numbers"]]) if draws else np.zeros((0, 4), int)
     pos_counts = np.stack([np.bincount(digits[:, p], minlength=10) for p in range(4)]) if len(digits) else np.zeros((4, 10))
     out = ["".join(str(d) for d in rng.choice(10, 4, replace=False))]  # 1) all-different digits
@@ -309,24 +336,72 @@ def score_past(conn) -> int:
 
 
 # ---------------------------------------------------------------- report payload
+# 4D "Big" bet payout per $1 (Singapore Pools fixed prizes)
+FOURD_BIG = {"first": 2000, "second": 1000, "third": 490, "starter": 250, "consolation": 60}
+TOTO_MATCH_PMF = [comb(6, k) * comb(43, 6 - k) / TOTO_ODDS for k in range(7)]
+_POS_CDF = np.cumsum([comb(4, k) * 0.1 ** k * 0.9 ** (4 - k) for k in range(5)])
+# best positional digit match of one pick against any of the 23 winning numbers: P(max <= k) = F(k)^23
+FOURD_BEST_PMF = np.diff(np.r_[0.0, _POS_CDF ** 23]).tolist()
+
+
+def _history(conn, game: str) -> list[dict]:
+    """Every scored pick, grouped by draw, with the actual result alongside."""
+    rows = conn.execute("SELECT * FROM picks WHERE game=? AND result IS NOT NULL ORDER BY draw_date, set_no", (game,)).fetchall()
+    by_date: dict[str, dict] = {}
+    for r in rows:
+        res = json.loads(r["result"])
+        if res.get("no_draw"):
+            continue
+        nums = json.loads(r["numbers"])
+        h = by_date.get(r["draw_date"])
+        if h is None:
+            if game == "toto":
+                d = conn.execute("SELECT * FROM toto_draws WHERE draw_no=?", (res["draw_no"],)).fetchone()
+                h = {"date": r["draw_date"], "no": d["draw_no"],
+                     "nums": [d[f"n{i}"] for i in range(1, 7)], "add": d["additional"], "sets": []}
+            else:
+                winners = [(w[0], w[1]) for w in conn.execute(
+                    "SELECT number, category FROM fourd_numbers WHERE draw_no=?", (res["draw_no"],))]
+                first = next((n for n, c in winners if c == "first"), None)
+                h = {"date": r["draw_date"], "no": res["draw_no"], "first": first, "winners": winners, "sets": []}
+            by_date[r["draw_date"]] = h
+        if game == "toto":
+            h["sets"].append({"lens": r["lens"], "numbers": nums, "matched": res["matched"], "add": res["additional"],
+                              "group": res["group"], "amount": res["amount"] or 0})
+        else:
+            cat = res.get("category")
+            # closest near-miss: most digits in the right position against any of the 23 winners
+            best_n, best_c, best = None, None, -1
+            for w, c in h["winners"]:
+                m = sum(a == b for a, b in zip(nums, w))
+                if m > best:
+                    best_n, best_c, best = w, c, m
+            h["sets"].append({"lens": r["lens"], "numbers": nums, "category": cat, "amount": FOURD_BIG.get(cat, 0),
+                              "best_match": best, "closest": best_n, "closest_cat": best_c})
+    for h in by_date.values():
+        h.pop("winners", None)
+    return list(by_date.values())
+
+
 def report_data(conn) -> dict:
     out = {}
     for game, p_any in (("toto", P_TOTO_ANY), ("fourd", P_4D_ANY)):
-        dates = [r[0] for r in conn.execute("SELECT DISTINCT draw_date FROM picks WHERE game=? ORDER BY draw_date", (game,))]
-        pending = [d for d in dates if conn.execute(
+        live_dates = [r[0] for r in conn.execute(
+            "SELECT DISTINCT draw_date FROM picks WHERE game=? ORDER BY draw_date", (game,))]
+        pending = [d for d in live_dates if conn.execute(
             "SELECT 1 FROM picks WHERE game=? AND draw_date=? AND result IS NULL", (game, d)).fetchone()]
-        scored = [d for d in dates if d not in pending]
-        nxt = pending[-1] if pending else None
-        last = scored[-1] if scored else None
-        rows = [dict(r) for r in conn.execute("SELECT * FROM picks WHERE game=? AND result IS NOT NULL", (game,))]
-        real = [r for r in rows if not json.loads(r["result"]).get("no_draw")]
-        g = {"next": None, "last": None,
-             "record": {"since": scored[0] if scored else None, "sets": len(real),
-                        "prizes": sum(1 for r in real if r["prize"]), "expected": len(real) * p_any}}
-        if nxt:
+        scored = [d for d in live_dates if d not in pending]
+        history = _history(conn, game)
+        n_live = sum(len(h["sets"]) for h in history)
+        g = {"next": None, "last": None, "history": history,
+             "record": {"since": scored[0] if scored else None, "sets": n_live,
+                        "prizes": sum(1 for h in history for s in h["sets"] if s["amount"]), "expected": n_live * p_any}}
+        if pending:
+            nxt = pending[-1]
             g["next"] = {"date": nxt, "sets": [{k: s[k] for k in ("lens", "numbers", "rationale")}
                                               for s in get_picks(conn, game, date.fromisoformat(nxt))]}
-        if last:
+        if scored:
+            last = scored[-1]
             sets = get_picks(conn, game, date.fromisoformat(last))
             res = json.loads(sets[0]["result"]) if sets else {}
             draw = None
@@ -342,4 +417,7 @@ def report_data(conn) -> dict:
     out["toto_odds"] = TOTO_ODDS
     out["p_toto_any"] = P_TOTO_ANY
     out["p_4d_any"] = P_4D_ANY
+    out["toto_match_pmf"] = TOTO_MATCH_PMF
+    out["fourd_best_pmf"] = FOURD_BEST_PMF
+    out["fourd_big"] = FOURD_BIG
     return out

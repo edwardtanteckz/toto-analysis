@@ -101,6 +101,15 @@ tbody tr.clickable { cursor: pointer; }
   border-radius: 6px; padding: 6px 10px; }
 .prize-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--text-2); margin-left: 6px; }
 .prize-tag.won { border-color: var(--good); color: var(--good); }
+.luck-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px; }
+@media (max-width: 860px) { .luck-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.luck-tiles .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.luck-tiles .l { font-size: 12px; color: var(--text-2); }
+.luck-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 860px) { .luck-grid { grid-template-columns: minmax(0, 1fr); } }
+.history td .balls { gap: 3px; }
+.history .ball { width: 22px; height: 22px; font-size: 11px; }
+.digit-hit { color: var(--series-1); font-weight: 700; text-decoration: underline; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -134,6 +143,17 @@ tbody tr.clickable { cursor: pointer; }
     <div class="card c4">
       <h2 id="tl-title">Last draw vs picks</h2>
       <div id="tl-body" class="explain"></div>
+    </div>
+    <div class="card c12">
+      <h2>How lucky are the picks?</h2>
+      <p class="sub">Every pick is stored before its draw and compared with the actual result. The record grows with each draw.</p>
+      <div class="luck-tiles" id="tk-tiles"></div>
+      <div class="luck-grid">
+        <div><h3 id="tk-dist-title"></h3><div class="chart" id="c-tk-dist"></div></div>
+        <div><h3>Running profit/loss by lens if you'd bought each set for $1</h3><div class="chart" id="c-tk-pnl"></div></div>
+      </div>
+      <h3 style="margin-top:14px">Picks vs actual draw</h3>
+      <div class="table-scroll"><table class="history" id="tk-table"></table></div>
     </div>
     <div class="card c3 kpi"><div class="v" id="t-kpi-draws"></div><div class="l">draws analysed</div></div>
     <div class="card c3 kpi"><div class="v" id="t-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
@@ -223,6 +243,17 @@ tbody tr.clickable { cursor: pointer; }
     <div class="card c4">
       <h2 id="fl-title">Last draw vs picks</h2>
       <div id="fl-body" class="explain"></div>
+    </div>
+    <div class="card c12">
+      <h2>How lucky are the picks?</h2>
+      <p class="sub">Every pick is stored before its draw and compared with the actual result. The record grows with each draw.</p>
+      <div class="luck-tiles" id="fk-tiles"></div>
+      <div class="luck-grid">
+        <div><h3 id="fk-dist-title"></h3><div class="chart" id="c-fk-dist"></div></div>
+        <div><h3>Running profit/loss by lens if you'd bought each number for $1</h3><div class="chart" id="c-fk-pnl"></div></div>
+      </div>
+      <h3 style="margin-top:14px">Picks vs actual draw</h3>
+      <div class="table-scroll"><table class="history" id="fk-table"></table></div>
     </div>
     <div class="card c3 kpi"><div class="v" id="f-kpi-draws"></div><div class="l">draws analysed</div></div>
     <div class="card c3 kpi"><div class="v" id="f-kpi-nums"></div><div class="l">winning numbers (23 per draw)</div></div>
