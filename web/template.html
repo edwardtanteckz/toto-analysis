@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOTO &amp; 4D Randomness</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f5f5f3; --surface-1: #fcfcfb; --border: #e3e2de;
+  --text-1: #0b0b0b; --text-2: #52514e; --text-3: #8a8984;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+  --band: #2a78d6; --band-fw: #9ec5f4; --grid: #ebeae6;
+  --div-neg: #2a78d6; --div-mid: #f0efec; --div-pos: #e34948;
+  --good: #006300; --warn: #b26b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-1: #f0efec; --text-2: #c3c2b7; --text-3: #8e8d85;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+    --band: #3987e5; --band-fw: #184f95; --grid: #2a2a27;
+    --div-neg: #3987e5; --div-mid: #383835; --div-pos: #e66767;
+    --good: #0ca30c; --warn: #fab219;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-1: #f0efec; --text-2: #c3c2b7; --text-3: #8e8d85;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --band: #3987e5; --band-fw: #184f95; --grid: #2a2a27;
+  --div-neg: #3987e5; --div-mid: #383835; --div-pos: #e66767;
+  --good: #0ca30c; --warn: #fab219;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-1);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0 0 2px; }
+h3 { font-size: 13px; margin: 0 0 4px; color: var(--text-2); font-weight: 600; }
+.sub { color: var(--text-2); font-size: 13px; margin: 0; }
+.muted { color: var(--text-3); font-size: 12px; }
+.banner { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--series-1);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; color: var(--text-2); font-size: 13px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab { background: none; border: 0; padding: 8px 14px; font: inherit; color: var(--text-2); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--text-1); border-color: var(--series-1); font-weight: 600; }
+.btn, select { font: inherit; font-size: 13px; color: var(--text-1); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.c12 { grid-column: span 12; } .c8 { grid-column: span 8; } .c6 { grid-column: span 6; } .c4 { grid-column: span 4; } .c3 { grid-column: span 3; }
+@media (max-width: 860px) { .c8, .c6, .c4 { grid-column: span 12; } .c3 { grid-column: span 6; } }
+.card-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.kpi .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .l { color: var(--text-2); font-size: 12px; }
+.chart canvas { display: block; width: 100%; touch-action: pan-y; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 12px; color: var(--text-2); }
+.lg { display: inline-flex; align-items: center; gap: 6px; }
+.lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+.lg i.lg-line { height: 2px; border-radius: 1px; }
+.lg i.lg-band { opacity: .35; }
+.lg i.lg-dash { height: 0; border-top: 2px dashed var(--c); background: none; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-2); font-weight: 600; font-size: 12px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr.sel { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
+tbody tr.clickable { cursor: pointer; }
+.verdict { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.verdict.ok { color: var(--good); } .verdict.flag { color: var(--warn); }
+.table-scroll { overflow-x: auto; }
+.tooltip { position: fixed; z-index: 10; pointer-events: none; display: none; background: var(--surface-1);
+  color: var(--text-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 260px; }
+.tooltip b { font-weight: 600; }
+.balls { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.ball { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid var(--border); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ball.add { border-color: var(--series-2); }
+.explain { color: var(--text-2); font-size: 13px; margin: 0 0 8px; }
+.nogl { padding: 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-2); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Singapore Pools TOTO &amp; 4D: is it random?</h1>
+      <p class="sub" id="meta"></p>
+    </div>
+    <button class="btn" id="theme" type="button">Toggle theme</button>
+  </header>
+
+  <div class="banner">Every draw is independent. These charts test whether the past results are <b>consistent with fair, uniform draws</b>.
+    They can't predict future numbers. Grey bands and dashed lines show what <b>__SIMS__ simulated fair histories</b> look like (Monte Carlo baseline).</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="toto">TOTO (6/49)</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="fourd">4D</button>
+  </div>
+  <div id="nogl" class="nogl" hidden>WebGL is unavailable in this browser, so the charts can't render. Tables are still shown.</div>
+
+  <!-- ============================ TOTO ============================ -->
+  <section id="tab-toto" class="grid">
+    <div class="card c3 kpi"><div class="v" id="t-kpi-draws"></div><div class="l">draws analysed</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-bf"></div><div class="l">Bayes factor favouring a fair machine (α=1)</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-pany"></div><div class="l" id="t-kpi-pany-l"></div></div>
+
+    <div class="card c12">
+      <div class="card-head">
+        <div><h2>How often each number was drawn</h2>
+          <p class="sub">Winning numbers (excl. additional). Shaded band = 90% of fair simulations per number; dashed = 90% range for the hottest/coldest of 49.</p></div>
+        <label class="muted">Window <select id="t-window"></select></label>
+      </div>
+      <div class="chart" id="c-freq"></div>
+    </div>
+
+    <div class="card c12">
+      <div class="card-head"><div><h2>Is any number biased? (Bayesian Dirichlet–multinomial)</h2>
+        <p class="sub">Posterior probability of each number per ball, with 95% credible intervals. Prior: Dirichlet(α=1). The dashed line is fair (1/49). Intervals crossing it mean there's no evidence of bias.</p></div></div>
+      <div class="chart" id="c-bayes"></div>
+      <p class="muted" id="t-bf-note"></p>
+    </div>
+
+    <div class="card c8">
+      <div class="card-head"><div><h2>Randomness tests</h2>
+        <p class="sub">p = Monte Carlo p-value where available (else classical). q = Benjamini–Hochberg adjusted across all tests. Click a row to see its null distribution.</p></div></div>
+      <div class="table-scroll"><table id="t-tests"></table></div>
+    </div>
+    <div class="card c4">
+      <h2 id="t-null-title">Null distribution</h2>
+      <p class="sub">Test statistic across fair simulations. Orange line = observed.</p>
+      <div class="chart" id="c-null"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Sum of the 6 winning numbers</h2>
+      <p class="sub" id="t-sum-note"></p>
+      <div class="chart" id="c-sum"></div>
+    </div>
+    <div class="card c6">
+      <div class="card-head"><div><h2>Balance per draw</h2><p class="sub">Observed draws vs hypergeometric expectation.</p></div>
+        <select id="t-balance"><option value="odd_even">Odd numbers per draw</option><option value="low_high">Low (1–24) per draw</option></select></div>
+      <div class="chart" id="c-balance"></div>
+    </div>
+
+    <div class="card c8">
+      <h2>Pair co-occurrence</h2>
+      <p class="sub">How often two numbers came out together, as a z-score vs expectation. Blue = less often, red = more often. With 1,176 pairs, a few |z|&gt;3 are expected by chance.</p>
+      <div class="chart" id="c-pairs"></div>
+    </div>
+    <div class="card c4">
+      <h2>Most frequent pairs</h2>
+      <p class="sub" id="t-pairs-note"></p>
+      <table id="t-pairs"></table>
+    </div>
+
+    <div class="card c6">
+      <h2>Gap test</h2>
+      <p class="sub">Draws between successive appearances of the same number vs a geometric (memoryless) distribution.</p>
+      <div class="chart" id="c-gaps"></div>
+    </div>
+    <div class="card c6">
+      <h2>Group 1 prize per draw</h2>
+      <p class="sub">Snowballs grow until someone wins Group 1.</p>
+      <div class="chart" id="c-prize"></div>
+    </div>
+
+    <div class="card c12">
+      <h2>Recent draws</h2>
+      <div class="table-scroll"><table id="t-recent"></table></div>
+    </div>
+  </section>
+
+  <!-- ============================ 4D ============================ -->
+  <section id="tab-fourd" class="grid" hidden>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-draws"></div><div class="l">draws analysed</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-nums"></div><div class="l">winning numbers (23 per draw)</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-bf"></div><div class="l">min Bayes factor favouring fair digits, across 4 positions</div></div>
+
+    <div class="card c6">
+      <h2>Digit frequency by position</h2>
+      <p class="sub">Deviation from expected count (every digit equally likely). Blue = fewer, red = more.</p>
+      <div class="chart" id="c-heat"></div>
+    </div>
+    <div class="card c6">
+      <h2>Is any digit biased? (Bayesian, per position)</h2>
+      <p class="sub">Posterior probability of each digit with 95% credible interval. Dashed line = fair (0.10).</p>
+      <div class="chart" id="c-fbayes"></div>
+    </div>
+
+    <div class="card c8">
+      <h2>Randomness tests</h2>
+      <p class="sub">Click a row to see its null distribution, where one was simulated.</p>
+      <div class="table-scroll"><table id="f-tests"></table></div>
+    </div>
+    <div class="card c4">
+      <h2 id="f-null-title">Null distribution</h2>
+      <p class="sub">Test statistic across fair simulations. Orange line = observed.</p>
+      <div class="chart" id="c-fnull"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Digit patterns</h2>
+      <p class="sub" id="f-pal-note"></p>
+      <div class="chart" id="c-patterns"></div>
+    </div>
+    <div class="card c6">
+      <h2>Digit sum (0–36)</h2>
+      <p class="sub">Sum of the 4 digits of every winning number vs exact fair distribution.</p>
+      <div class="chart" id="c-dsum"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Most repeated winning numbers</h2>
+      <p class="sub" id="f-rep-note"></p>
+      <table id="f-repeats"></table>
+    </div>
+    <div class="card c6">
+      <h2>Recent 1st prizes</h2>
+      <div class="table-scroll"><table id="f-recent"></table></div>
+    </div>
+  </section>
+
+  <p class="muted" style="margin-top:24px">Source: Singapore Pools public results. Generated __GENERATED__. Data: data/sgpools.db.</p>
+</div>
+
+<script>__CHARTS_JS__</script>
+<script>
+const DATA = __DATA__;
+</script>
+<script>__APP_JS__</script>
+</body>
+</html>
