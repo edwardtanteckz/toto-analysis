@@ -85,6 +85,22 @@ tbody tr.clickable { cursor: pointer; }
 .ball.add { border-color: var(--series-2); }
 .explain { color: var(--text-2); font-size: 13px; margin: 0 0 8px; }
 .nogl { padding: 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-2); }
+.picks-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.pick { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 10px; align-items: start;
+  padding: 10px 0; border-top: 1px solid var(--border); }
+.pick:first-child { border-top: 0; padding-top: 2px; }
+.pick .no { font-weight: 650; color: var(--text-3); font-size: 18px; line-height: 28px; }
+.pick .lens { font-weight: 600; font-size: 13px; margin-right: 8px; }
+.pick .why { color: var(--text-2); font-size: 12px; grid-column: 2; }
+.pick .balls { margin: 2px 0; }
+.ball.big { width: 32px; height: 32px; font-size: 14px; font-weight: 600; border-width: 2px; border-color: var(--series-1); }
+.ball.hit { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+.ball.hit-add { background: var(--series-2); color: #fff; border-color: var(--series-2); }
+.digits { font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.18em; }
+.odds { margin-top: 8px; font-size: 12px; color: var(--text-2); background: var(--surface-0);
+  border-radius: 6px; padding: 6px 10px; }
+.prize-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--text-2); margin-left: 6px; }
+.prize-tag.won { border-color: var(--good); color: var(--good); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -109,6 +125,16 @@ tbody tr.clickable { cursor: pointer; }
 
   <!-- ============================ TOTO ============================ -->
   <section id="tab-toto" class="grid">
+    <div class="card c8">
+      <h2 id="tp-title">Picks for next draw</h2>
+      <p class="sub">Three sets, each from a different lens. None can raise your chance of winning.</p>
+      <div class="picks-row" id="tp-sets"></div>
+      <div class="odds" id="tp-odds"></div>
+    </div>
+    <div class="card c4">
+      <h2 id="tl-title">Last draw vs picks</h2>
+      <div id="tl-body" class="explain"></div>
+    </div>
     <div class="card c3 kpi"><div class="v" id="t-kpi-draws"></div><div class="l">draws analysed</div></div>
     <div class="card c3 kpi"><div class="v" id="t-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
     <div class="card c3 kpi"><div class="v" id="t-kpi-bf"></div><div class="l">Bayes factor favouring a fair machine (α=1)</div></div>
@@ -128,6 +154,12 @@ tbody tr.clickable { cursor: pointer; }
         <p class="sub">Posterior probability of each number per ball, with 95% credible intervals. Prior: Dirichlet(α=1). The dashed line is fair (1/49). Intervals crossing it mean there's no evidence of bias.</p></div></div>
       <div class="chart" id="c-bayes"></div>
       <p class="muted" id="t-bf-note"></p>
+    </div>
+
+    <div class="card c12">
+      <h2>Which numbers do other players pick? (estimated)</h2>
+      <p class="sub" id="t-pop-note"></p>
+      <div class="chart" id="c-pop"></div>
     </div>
 
     <div class="card c8">
@@ -182,6 +214,16 @@ tbody tr.clickable { cursor: pointer; }
 
   <!-- ============================ 4D ============================ -->
   <section id="tab-fourd" class="grid" hidden>
+    <div class="card c8">
+      <h2 id="fp-title">Picks for next draw</h2>
+      <p class="sub">Three numbers, each from a different lens. 4D pays fixed prizes, so every number has the same odds and value.</p>
+      <div class="picks-row" id="fp-sets"></div>
+      <div class="odds" id="fp-odds"></div>
+    </div>
+    <div class="card c4">
+      <h2 id="fl-title">Last draw vs picks</h2>
+      <div id="fl-body" class="explain"></div>
+    </div>
     <div class="card c3 kpi"><div class="v" id="f-kpi-draws"></div><div class="l">draws analysed</div></div>
     <div class="card c3 kpi"><div class="v" id="f-kpi-nums"></div><div class="l">winning numbers (23 per draw)</div></div>
     <div class="card c3 kpi"><div class="v" id="f-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>

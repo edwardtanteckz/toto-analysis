@@ -299,5 +299,74 @@
   $("f-recent").innerHTML = `<thead><tr><th>Draw</th><th>Date</th><th>1st prize</th></tr></thead><tbody>` +
     F.draws.slice(-12).reverse().map((d) => `<tr><td>${d.no}</td><td>${d.date}</td><td>${d.first || "–"}</td></tr>`).join("") + "</tbody>";
 
+  // ================================================================ PICKS (top of each tab)
+  const PK = DATA.picks;
+  const longDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const totoBalls = (nums, big, win, add) => `<span class="balls">${nums.map((n) => {
+    const cls = win ? (win.includes(n) ? " hit" : n === add ? " hit-add" : "") : "";
+    return `<span class="ball${big ? " big" : ""}${cls}">${n}</span>`;
+  }).join("")}</span>`;
+  const recordLine = (r, game) => r.sets
+    ? `<p class="muted">Track record since ${r.since}: ${r.prizes} prize${r.prizes === 1 ? "" : "s"} from ${r.sets} ${game === "toto" ? "sets" : "numbers"}. Random tickets would expect ${fmt(r.expected, 2)}.</p>`
+    : `<p class="muted">Track record starts once the first picked draw has a result.</p>`;
+
+  function renderPicks(game, P, prefix) {
+    const isToto = game === "toto";
+    if (!P.next) {
+      $(prefix + "p-sets").innerHTML = `<p class="muted">No picks yet. Run <code>python make_picks.py --show</code>.</p>`;
+    } else {
+      $(prefix + "p-title").textContent = `Picks for next draw · ${longDate(P.next.date)}`;
+      $(prefix + "p-sets").innerHTML = P.next.sets.map((s, i) => `<div class="pick"><div class="no">${i + 1}</div>
+        <div><span class="lens">${s.lens}</span>${isToto ? totoBalls(s.numbers, true) : `<span class="digits">${s.numbers}</span>`}</div>
+        <div class="why">${s.rationale}</div></div>`).join("");
+    }
+    $(prefix + "p-odds").innerHTML = isToto
+      ? `Odds per set: jackpot <b>1 in ${fmt(PK.toto_odds)}</b> · any prize 1 in ${fmt(1 / PK.p_toto_any)}. Identical for every set; past draws don't change them.`
+      : `Odds per number (Big bet): any prize <b>1 in ${fmt(1 / PK.p_4d_any)}</b> · 1st prize 1 in 10,000. Identical for every number.`;
+
+    const L = P.last;
+    let body;
+    if (!L) body = `<p>No picked draw has a result yet. After ${P.next ? longDate(P.next.date) : "the next draw"} you'll see how the picks did here.</p>`;
+    else if (!L.draw) body = `<p>${longDate(L.date)}: no draw took place.</p>`;
+    else if (isToto) {
+      body = `<p><b>${longDate(L.date)}</b> result:</p>${totoBalls(L.draw.nums, false)} <span class="ball add">${L.draw.add}</span>` +
+        L.sets.map((s) => `<div style="margin-top:8px">${totoBalls(s.numbers, false, L.draw.nums, L.draw.add)}
+          <span class="prize-tag${s.prize ? " won" : ""}">${s.result.matched} matched${s.result.additional ? " + add" : ""}${s.prize ? " · " + s.prize + (s.result.amount ? " " + money(s.result.amount) : "") : ""}</span></div>`).join("");
+    } else {
+      body = `<p><b>${longDate(L.date)}</b></p>` + L.sets.map((s) =>
+        `<div style="margin-top:6px"><span class="digits" style="font-size:18px">${s.numbers}</span>
+          <span class="prize-tag${s.prize ? " won" : ""}">${s.prize ? "won: " + s.prize : "no prize"}</span></div>`).join("");
+    }
+    $(prefix + "l-body").innerHTML = body + recordLine(P.record, game);
+  }
+  renderPicks("toto", PK.toto, "t");
+  renderPicks("fourd", PK.fourd, "f");
+
+  // popularity chart
+  const POP = PK.popularity;
+  $("t-pop-note").textContent = (POP.source === "prior"
+    ? "Based on published lotto-player studies (birthdays 1–31 and lucky numbers are over-played)."
+    : `Estimated from ${POP.n} draws of Singapore Pools winning-share counts: when popular numbers are drawn, more people share the 3- and 4-number prizes. ` +
+      `The model explains ${fmt(POP.cv_gain * 100, 0)}% more variation than draw size alone (cross-validated), blended 70/30 with a birthday/lucky-number prior.`) +
+    " Taller = more players pick it. The Anti-popular set favours the short bars.";
+  W.chart($("c-pop"), () => {
+    const c = POP.coef.map((v) => (Math.exp(v) - 1) * 100);
+    const lo = Math.min(...c, 0) * 1.15, hi = Math.max(...c, 0) * 1.15;
+    return {
+      x: [0.4, 49.6], y: [lo, hi], height: 220, aria: "Estimated popularity of each TOTO number with players",
+      xTicks: intTicks(1, 49, 1).filter((t) => t.v === 1 || t.v % 4 === 0 || t.v === 49),
+      yTicks: W.niceTicks(lo, hi, 4, (v) => (v > 0 ? "+" : "") + fmt(v, 0) + "%"), xTitle: "number", yTitle: "relative popularity",
+      marks: [
+        { type: "rect", round: BAR_R, hitBand: true, items: c.map((v, i) => ({
+          x0: i + 1 - 0.36, x1: i + 1 + 0.36, y0: 0, y1: v, color: v >= 0 ? "var(--div-pos)" : "var(--div-neg)",
+          tip: `<b>Number ${i + 1}</b><br>${v >= 0 ? "More" : "Less"} popular than average: ${v >= 0 ? "+" : ""}${fmt(v, 1)}%` +
+            `${i < 31 ? "<br>Within 1–31 (birthday range)" : ""}`,
+        })) },
+        { type: "hline", y: 0, color: "var(--text-3)", width: 1 },
+      ],
+      legend: [{ label: "picked more often", color: "var(--div-pos)" }, { label: "picked less often", color: "var(--div-neg)" }],
+    };
+  });
+
   W.renderAll();
 })();

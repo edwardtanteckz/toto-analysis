@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 from pathlib import Path
 
-from analysis import stats
+from analysis import picks, stats
 from sgpools import db
 
 ROOT = Path(__file__).resolve().parent
@@ -33,12 +33,13 @@ def build(sims: int = stats.MC_SIMS, out: Path = REPORT_PATH) -> Path:
     conn = db.connect()
     try:
         toto, fourd = stats.load_toto(conn), stats.load_fourd(conn)
+        picks_data = picks.report_data(conn)
     finally:
         conn.close()
     if not toto or not fourd:
         raise SystemExit("DB is empty - run `python update_db.py --backfill-years 2` first.")
     log.info("analysing %d TOTO and %d 4D draws (%d simulations)", len(toto), len(fourd), sims)
-    data = _clean({"toto": stats.analyse_toto(toto, sims), "fourd": stats.analyse_fourd(fourd, sims), "mc_sims": sims})
+    data = _clean({"toto": stats.analyse_toto(toto, sims), "fourd": stats.analyse_fourd(fourd, sims), "mc_sims": sims, "picks": picks_data})
 
     html = (WEB / "template.html").read_text()
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")

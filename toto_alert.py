@@ -16,6 +16,7 @@ from pathlib import Path
 import holidays
 import requests
 
+from analysis import picks
 from sgpools import db, scraper
 
 log = logging.getLogger("toto_alert")
@@ -44,13 +45,18 @@ def previous_working_day(d: date) -> date:
     return d
 
 
-def format_message(nxt: scraper.NextToto) -> str:
+def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> str:
     prize = f"${nxt.est_jackpot:,}" if nxt.est_jackpot else (nxt.raw_jackpot or "n/a")
-    return (
+    msg = (
         f":8ball: *TOTO draw coming up*\n"
         f"*Draw date:* {nxt.draw_date:%a, %d %b %Y}, 6.30pm\n"
         f"*Est. Group 1 (grand) prize:* {prize}"
     )
+    if sets:
+        msg += "\n\n*Picks for this draw*\n" + "\n".join(
+            f"{s['set_no']}. `{' '.join(f'{n:02d}' for n in s['numbers'])}`  _{s['lens']}_" for s in sets)
+        msg += f"\n_Odds per set: 1 in {picks.TOTO_ODDS:,} (same for every set). Anti-popular only means fewer people to share a win with._"
+    return msg
 
 
 def post_slack(text: str) -> None:
@@ -68,12 +74,18 @@ def run(today: date | None = None, dry_run: bool = False, force: bool = False) -
     today = today or date.today()
     nxt = scraper.fetch_next_toto()
     alert_day = previous_working_day(nxt.draw_date)
-    msg = format_message(nxt)
     log.info("next draw %s, alert day %s, today %s", nxt.draw_date, alert_day, today)
 
     conn = db.connect()
     try:
         db.record_next_toto(conn, nxt)
+        try:
+            picks.ensure(conn, "toto", nxt.draw_date)
+            sets = picks.get_picks(conn, "toto", nxt.draw_date)
+        except Exception:
+            log.exception("could not load picks; sending alert without them")
+            sets = None
+        msg = format_message(nxt, sets)
         already = conn.execute("SELECT 1 FROM alerts_sent WHERE draw_date=?", (nxt.draw_date.isoformat(),)).fetchone()
         due = force or (today == alert_day and not already)
         if dry_run:

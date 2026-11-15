@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS alerts_sent (
     sent_at   TEXT NOT NULL,
     message   TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS picks (
+    game       TEXT NOT NULL,      -- toto | fourd
+    draw_date  TEXT NOT NULL,
+    set_no     INTEGER NOT NULL,
+    lens       TEXT NOT NULL,
+    numbers    TEXT NOT NULL,      -- JSON: [6 ints] for TOTO, "NNNN" for 4D
+    rationale  TEXT NOT NULL,
+    salt       INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    result     TEXT,               -- JSON once the draw is scored
+    prize      TEXT,               -- e.g. "Group 7", "starter", NULL if none
+    PRIMARY KEY (game, draw_date, set_no)
+);
 CREATE INDEX IF NOT EXISTS idx_toto_date  ON toto_draws(draw_date);
 CREATE INDEX IF NOT EXISTS idx_fourd_date ON fourd_draws(draw_date);
 """
