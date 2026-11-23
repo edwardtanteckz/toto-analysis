@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOTO &amp; 4D Randomness</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f5f5f3; --surface-1: #fcfcfb; --border: #e3e2de;
+  --text-1: #0b0b0b; --text-2: #52514e; --text-3: #8a8984;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+  --band: #2a78d6; --band-fw: #9ec5f4; --grid: #ebeae6;
+  --div-neg: #2a78d6; --div-mid: #f0efec; --div-pos: #e34948;
+  --good: #006300; --warn: #b26b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-1: #f0efec; --text-2: #c3c2b7; --text-3: #8e8d85;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+    --band: #3987e5; --band-fw: #184f95; --grid: #2a2a27;
+    --div-neg: #3987e5; --div-mid: #383835; --div-pos: #e66767;
+    --good: #0ca30c; --warn: #fab219;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-1: #f0efec; --text-2: #c3c2b7; --text-3: #8e8d85;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --band: #3987e5; --band-fw: #184f95; --grid: #2a2a27;
+  --div-neg: #3987e5; --div-mid: #383835; --div-pos: #e66767;
+  --good: #0ca30c; --warn: #fab219;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-1);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0 0 2px; }
+h3 { font-size: 13px; margin: 0 0 4px; color: var(--text-2); font-weight: 600; }
+.sub { color: var(--text-2); font-size: 13px; margin: 0; }
+.muted { color: var(--text-3); font-size: 12px; }
+.banner { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--series-1);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; color: var(--text-2); font-size: 13px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab { background: none; border: 0; padding: 8px 14px; font: inherit; color: var(--text-2); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--text-1); border-color: var(--series-1); font-weight: 600; }
+.btn, select { font: inherit; font-size: 13px; color: var(--text-1); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.c12 { grid-column: span 12; } .c8 { grid-column: span 8; } .c6 { grid-column: span 6; } .c4 { grid-column: span 4; } .c3 { grid-column: span 3; }
+@media (max-width: 860px) { .c8, .c6, .c4 { grid-column: span 12; } .c3 { grid-column: span 6; } }
+.card-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.kpi .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .l { color: var(--text-2); font-size: 12px; }
+.chart canvas { display: block; width: 100%; touch-action: pan-y; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 12px; color: var(--text-2); }
+.lg { display: inline-flex; align-items: center; gap: 6px; }
+.lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+.lg i.lg-line { height: 2px; border-radius: 1px; }
+.lg i.lg-band { opacity: .35; }
+.lg i.lg-dash { height: 0; border-top: 2px dashed var(--c); background: none; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-2); font-weight: 600; font-size: 12px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr.sel { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
+tbody tr.clickable { cursor: pointer; }
+.verdict { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.verdict.ok { color: var(--good); } .verdict.flag { color: var(--warn); }
+.table-scroll { overflow-x: auto; }
+.tooltip { position: fixed; z-index: 10; pointer-events: none; display: none; background: var(--surface-1);
+  color: var(--text-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 260px; }
+.tooltip b { font-weight: 600; }
+.balls { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.ball { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid var(--border); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ball.add { border-color: var(--series-2); }
+.explain { color: var(--text-2); font-size: 13px; margin: 0 0 8px; }
+.nogl { padding: 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-2); }
+.picks-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.pick { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 10px; align-items: start;
+  padding: 10px 0; border-top: 1px solid var(--border); }
+.pick:first-child { border-top: 0; padding-top: 2px; }
+.pick .no { font-weight: 650; color: var(--text-3); font-size: 18px; line-height: 28px; }
+.pick .lens { font-weight: 600; font-size: 13px; margin-right: 8px; }
+.pick .why { color: var(--text-2); font-size: 12px; grid-column: 2; }
+.pick .balls { margin: 2px 0; }
+.ball.big { width: 32px; height: 32px; font-size: 14px; font-weight: 600; border-width: 2px; border-color: var(--series-1); }
+.ball.hit { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+.ball.hit-add { background: var(--series-2); color: #fff; border-color: var(--series-2); }
+.digits { font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.18em; }
+.odds { margin-top: 8px; font-size: 12px; color: var(--text-2); background: var(--surface-0);
+  border-radius: 6px; padding: 6px 10px; }
+.prize-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--text-2); margin-left: 6px; }
+.prize-tag.won { border-color: var(--good); color: var(--good); }
+.luck-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px; }
+@media (max-width: 860px) { .luck-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.luck-tiles .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.luck-tiles .l { font-size: 12px; color: var(--text-2); }
+.luck-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 860px) { .luck-grid { grid-template-columns: minmax(0, 1fr); } }
+.history td .balls { gap: 3px; }
+.history .ball { width: 22px; height: 22px; font-size: 11px; }
+.digit-hit { color: var(--series-1); font-weight: 700; text-decoration: underline; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Singapore Pools TOTO &amp; 4D: is it random?</h1>
+      <p class="sub" id="meta"></p>
+    </div>
+    <button class="btn" id="theme" type="button">Toggle theme</button>
+  </header>
+
+  <div class="banner">Every draw is independent. These charts test whether the past results are <b>consistent with fair, uniform draws</b>.
+    They can't predict future numbers. Grey bands and dashed lines show what <b>10,000 simulated fair histories</b> look like (Monte Carlo baseline).</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="toto">TOTO (6/49)</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="fourd">4D</button>
+  </div>
+  <div id="nogl" class="nogl" hidden>WebGL is unavailable in this browser, so the charts can't render. Tables are still shown.</div>
+
+  <!-- ============================ TOTO ============================ -->
+  <section id="tab-toto" class="grid">
+    <div class="card c8">
+      <h2 id="tp-title">Picks for next draw</h2>
+      <p class="sub">Three sets, each from a different lens. None can raise your chance of winning.</p>
+      <div class="picks-row" id="tp-sets"></div>
+      <div class="odds" id="tp-odds"></div>
+    </div>
+    <div class="card c4">
+      <h2 id="tl-title">Last draw vs picks</h2>
+      <div id="tl-body" class="explain"></div>
+    </div>
+    <div class="card c12">
+      <h2>How lucky are the picks?</h2>
+      <p class="sub">Every pick is stored before its draw and compared with the actual result. The record grows with each draw.</p>
+      <div class="luck-tiles" id="tk-tiles"></div>
+      <div class="luck-grid">
+        <div><h3 id="tk-dist-title"></h3><div class="chart" id="c-tk-dist"></div></div>
+        <div><h3>Running profit/loss by lens if you'd bought each set for $1</h3><div class="chart" id="c-tk-pnl"></div></div>
+      </div>
+      <h3 style="margin-top:14px">Picks vs actual draw</h3>
+      <div class="table-scroll"><table class="history" id="tk-table"></table></div>
+    </div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-draws"></div><div class="l">draws analysed</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-bf"></div><div class="l">Bayes factor favouring a fair machine (α=1)</div></div>
+    <div class="card c3 kpi"><div class="v" id="t-kpi-pany"></div><div class="l" id="t-kpi-pany-l"></div></div>
+
+    <div class="card c12">
+      <div class="card-head">
+        <div><h2>How often each number was drawn</h2>
+          <p class="sub">Winning numbers (excl. additional). Shaded band = 90% of fair simulations per number; dashed = 90% range for the hottest/coldest of 49.</p></div>
+        <label class="muted">Window <select id="t-window"></select></label>
+      </div>
+      <div class="chart" id="c-freq"></div>
+    </div>
+
+    <div class="card c12">
+      <div class="card-head"><div><h2>Is any number biased? (Bayesian Dirichlet–multinomial)</h2>
+        <p class="sub">Posterior probability of each number per ball, with 95% credible intervals. Prior: Dirichlet(α=1). The dashed line is fair (1/49). Intervals crossing it mean there's no evidence of bias.</p></div></div>
+      <div class="chart" id="c-bayes"></div>
+      <p class="muted" id="t-bf-note"></p>
+    </div>
+
+    <div class="card c12">
+      <h2>Which numbers do other players pick? (estimated)</h2>
+      <p class="sub" id="t-pop-note"></p>
+      <div class="chart" id="c-pop"></div>
+    </div>
+
+    <div class="card c8">
+      <div class="card-head"><div><h2>Randomness tests</h2>
+        <p class="sub">p = Monte Carlo p-value where available (else classical). q = Benjamini–Hochberg adjusted across all tests. Click a row to see its null distribution.</p></div></div>
+      <div class="table-scroll"><table id="t-tests"></table></div>
+    </div>
+    <div class="card c4">
+      <h2 id="t-null-title">Null distribution</h2>
+      <p class="sub">Test statistic across fair simulations. Orange line = observed.</p>
+      <div class="chart" id="c-null"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Sum of the 6 winning numbers</h2>
+      <p class="sub" id="t-sum-note"></p>
+      <div class="chart" id="c-sum"></div>
+    </div>
+    <div class="card c6">
+      <div class="card-head"><div><h2>Balance per draw</h2><p class="sub">Observed draws vs hypergeometric expectation.</p></div>
+        <select id="t-balance"><option value="odd_even">Odd numbers per draw</option><option value="low_high">Low (1–24) per draw</option></select></div>
+      <div class="chart" id="c-balance"></div>
+    </div>
+
+    <div class="card c8">
+      <h2>Pair co-occurrence</h2>
+      <p class="sub">How often two numbers came out together, as a z-score vs expectation. Blue = less often, red = more often. With 1,176 pairs, a few |z|&gt;3 are expected by chance.</p>
+      <div class="chart" id="c-pairs"></div>
+    </div>
+    <div class="card c4">
+      <h2>Most frequent pairs</h2>
+      <p class="sub" id="t-pairs-note"></p>
+      <table id="t-pairs"></table>
+    </div>
+
+    <div class="card c6">
+      <h2>Gap test</h2>
+      <p class="sub">Draws between successive appearances of the same number vs a geometric (memoryless) distribution.</p>
+      <div class="chart" id="c-gaps"></div>
+    </div>
+    <div class="card c6">
+      <h2>Group 1 prize per draw</h2>
+      <p class="sub">Snowballs grow until someone wins Group 1.</p>
+      <div class="chart" id="c-prize"></div>
+    </div>
+
+    <div class="card c12">
+      <h2>Recent draws</h2>
+      <div class="table-scroll"><table id="t-recent"></table></div>
+    </div>
+  </section>
+
+  <!-- ============================ 4D ============================ -->
+  <section id="tab-fourd" class="grid" hidden>
+    <div class="card c8">
+      <h2 id="fp-title">Picks for next draw</h2>
+      <p class="sub">Three numbers, each from a different lens. 4D pays fixed prizes, so every number has the same odds and value.</p>
+      <div class="picks-row" id="fp-sets"></div>
+      <div class="odds" id="fp-odds"></div>
+    </div>
+    <div class="card c4">
+      <h2 id="fl-title">Last draw vs picks</h2>
+      <div id="fl-body" class="explain"></div>
+    </div>
+    <div class="card c12">
+      <h2>How lucky are the picks?</h2>
+      <p class="sub">Every pick is stored before its draw and compared with the actual result. The record grows with each draw.</p>
+      <div class="luck-tiles" id="fk-tiles"></div>
+      <div class="luck-grid">
+        <div><h3 id="fk-dist-title"></h3><div class="chart" id="c-fk-dist"></div></div>
+        <div><h3>Running profit/loss by lens if you'd bought each number for $1</h3><div class="chart" id="c-fk-pnl"></div></div>
+      </div>
+      <h3 style="margin-top:14px">Picks vs actual draw</h3>
+      <div class="table-scroll"><table class="history" id="fk-table"></table></div>
+    </div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-draws"></div><div class="l">draws analysed</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-nums"></div><div class="l">winning numbers (23 per draw)</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-tests"></div><div class="l">randomness tests consistent with fair</div></div>
+    <div class="card c3 kpi"><div class="v" id="f-kpi-bf"></div><div class="l">min Bayes factor favouring fair digits, across 4 positions</div></div>
+
+    <div class="card c6">
+      <h2>Digit frequency by position</h2>
+      <p class="sub">Deviation from expected count (every digit equally likely). Blue = fewer, red = more.</p>
+      <div class="chart" id="c-heat"></div>
+    </div>
+    <div class="card c6">
+      <h2>Is any digit biased? (Bayesian, per position)</h2>
+      <p class="sub">Posterior probability of each digit with 95% credible interval. Dashed line = fair (0.10).</p>
+      <div class="chart" id="c-fbayes"></div>
+    </div>
+
+    <div class="card c8">
+      <h2>Randomness tests</h2>
+      <p class="sub">Click a row to see its null distribution, where one was simulated.</p>
+      <div class="table-scroll"><table id="f-tests"></table></div>
+    </div>
+    <div class="card c4">
+      <h2 id="f-null-title">Null distribution</h2>
+      <p class="sub">Test statistic across fair simulations. Orange line = observed.</p>
+      <div class="chart" id="c-fnull"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Digit patterns</h2>
+      <p class="sub" id="f-pal-note"></p>
+      <div class="chart" id="c-patterns"></div>
+    </div>
+    <div class="card c6">
+      <h2>Digit sum (0–36)</h2>
+      <p class="sub">Sum of the 4 digits of every winning number vs exact fair distribution.</p>
+      <div class="chart" id="c-dsum"></div>
+    </div>
+
+    <div class="card c6">
+      <h2>Most repeated winning numbers</h2>
+      <p class="sub" id="f-rep-note"></p>
+      <table id="f-repeats"></table>
+    </div>
+    <div class="card c6">
+      <h2>Recent 1st prizes</h2>
+      <div class="table-scroll"><table id="f-recent"></table></div>
+    </div>
+  </section>
+
+  <p class="muted" style="margin-top:24px">Source: Singapore Pools public results. Generated 15 Nov 2026 14:06. Data: data/sgpools.db.</p>
+</div>
+
+<script>/* Minimal WebGL chart renderer (no dependencies).
+ *
+ * One shared WebGL context renders every chart into an offscreen canvas, which is then
+ * blitted onto each chart's own 2D canvas (avoids the browser's ~16-context limit).
+ * Marks (bars, bands, grid, lines, heatmap cells) are drawn with WebGL; axis text is
+ * drawn on the 2D canvas. Hover uses CPU hit-testing against the mark list.
+ *
+ * spec = {
+ *   x: [min,max], y: [min,max], pad: {l,r,t,b},
+ *   xTicks: [{v,label}], yTicks: [{v,label}], xTitle, yTitle,
+ *   marks: [
+ *     {type:'rect', items:[{x0,x1,y0,y1,color,tip,round}]},      // data coords
+ *     {type:'line', points:[[x,y],...], color, width, tips:[...]},
+ *     {type:'hband', y0, y1, color}, {type:'hline', y, color, width, dash}
+ *   ],
+ *   legend: [{label,color,kind:'swatch'|'line'|'band'}]
+ * }
+ */
+(function () {
+  "use strict";
+
+  const VS = `
+    attribute vec2 a_pos; attribute vec4 a_color; attribute vec4 a_rect; attribute float a_radius;
+    uniform vec2 u_size;
+    varying vec4 v_color; varying vec4 v_rect; varying float v_radius; varying vec2 v_px;
+    void main(){
+      v_color=a_color; v_rect=a_rect; v_radius=a_radius; v_px=a_pos;
+      vec2 c = a_pos / u_size * 2.0 - 1.0;
+      gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
+    }`;
+  // Rounded-rect SDF for bar ends; radius < 0 disables it (line segments).
+  const FS = `
+    precision mediump float;
+    varying vec4 v_color; varying vec4 v_rect; varying float v_radius; varying vec2 v_px;
+    void main(){
+      float alpha = 1.0;
+      if (v_radius > 0.0) {
+        vec2 center = (v_rect.xy + v_rect.zw) * 0.5;
+        vec2 hs = abs(v_rect.zw - v_rect.xy) * 0.5;
+        float r = min(v_radius, min(hs.x, hs.y));
+        vec2 q = abs(v_px - center) - hs + r;
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+        alpha = clamp(0.5 - d, 0.0, 1.0);
+      }
+      gl_FragColor = vec4(v_color.rgb * v_color.a * alpha, v_color.a * alpha);
+    }`;
+
+  let gl, glCanvas, prog, buf, loc;
+  let glFailed = false;
+  function initGL() {
+    if (gl) return true;
+    if (glFailed) return false;
+    try { return setupGL(); } catch (e) { console.error(e); gl = null; glFailed = true; return false; }
+  }
+  function setupGL() {
+    glCanvas = document.createElement("canvas");
+    gl = glCanvas.getContext("webgl", { premultipliedAlpha: true, antialias: true, preserveDrawingBuffer: true });
+    if (!gl) return false;
+    const sh = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    };
+    prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+    buf = gl.createBuffer();
+    loc = {
+      pos: gl.getAttribLocation(prog, "a_pos"), color: gl.getAttribLocation(prog, "a_color"),
+      rect: gl.getAttribLocation(prog, "a_rect"), radius: gl.getAttribLocation(prog, "a_radius"),
+      size: gl.getUniformLocation(prog, "u_size"),
+    };
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    return true;
+  }
+
+  // ---- colour helpers
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  function rgba(c, a) {
+    if (Array.isArray(c)) return c;
+    if (c.startsWith("var(")) c = cssVar(c.slice(4, -1));
+    const h = c.replace("#", "");
+    const n = parseInt(h.length === 3 ? h.split("").map((x) => x + x).join("") : h, 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, a == null ? 1 : a];
+  }
+  function mix(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
+  // Diverging: negative -> --div-neg, 0 -> --div-mid, positive -> --div-pos. v in [-1,1].
+  function diverging(v) {
+    const mid = rgba(cssVar("--div-mid")), neg = rgba(cssVar("--div-neg")), pos = rgba(cssVar("--div-pos"));
+    const t = Math.max(-1, Math.min(1, v));
+    return t < 0 ? mix(mid, neg, -t) : mix(mid, pos, t);
+  }
+
+  // ---- geometry -> vertex buffer (pos2 color4 rect4 radius1 = 11 floats)
+  function pushQuad(out, x0, y0, x1, y1, color, radius) {
+    const r = [Math.min(x0, x1), Math.min(y0, y1), Math.max(x0, x1), Math.max(y0, y1)];
+    const v = (x, y) => out.push(x, y, color[0], color[1], color[2], color[3], r[0], r[1], r[2], r[3], radius);
+    v(r[0], r[1]); v(r[2], r[1]); v(r[0], r[3]);
+    v(r[0], r[3]); v(r[2], r[1]); v(r[2], r[3]);
+  }
+  function pushSegment(out, ax, ay, bx, by, w, color) {
+    const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * w / 2, ny = (dx / len) * w / 2;
+    const v = (x, y) => out.push(x, y, color[0], color[1], color[2], color[3], 0, 0, 0, 0, -1);
+    v(ax + nx, ay + ny); v(bx + nx, by + ny); v(ax - nx, ay - ny);
+    v(ax - nx, ay - ny); v(bx + nx, by + ny); v(bx - nx, by - ny);
+  }
+
+  const charts = [];
+  let tooltip;
+
+  class Chart {
+    constructor(container, specFn) {
+      this.el = container;
+      this.specFn = specFn;
+      this.canvas = document.createElement("canvas");
+      this.canvas.setAttribute("role", "img");
+      this.el.appendChild(this.canvas);
+      this.legendEl = document.createElement("div");
+      this.legendEl.className = "legend";
+      this.el.appendChild(this.legendEl);
+      this.hover = null;
+      this.canvas.addEventListener("mousemove", (e) => this.onMove(e));
+      this.canvas.addEventListener("mouseleave", () => { this.hover = null; hideTip(); this.render(); });
+      this.canvas.addEventListener("touchstart", (e) => this.onMove(e.touches[0]), { passive: true });
+      new ResizeObserver(() => this.render()).observe(this.el);
+      charts.push(this);
+    }
+
+    layout(spec) {
+      const pad = Object.assign({ l: 48, r: 14, t: 10, b: 30 }, spec.pad || {});
+      const w = this.el.clientWidth, h = spec.height || 280;
+      const sx = (v) => pad.l + ((v - spec.x[0]) / (spec.x[1] - spec.x[0])) * (w - pad.l - pad.r);
+      const sy = (v) => h - pad.b - ((v - spec.y[0]) / (spec.y[1] - spec.y[0])) * (h - pad.t - pad.b);
+      return { pad, w, h, sx, sy };
+    }
+
+    render() {
+      if (!this.el.clientWidth || !initGL()) return;
+      const spec = (this.spec = this.specFn());
+      const L = (this.L = this.layout(spec));
+      const dpr = window.devicePixelRatio || 1;
+      const W = Math.round(L.w * dpr), H = Math.round(L.h * dpr);
+      this.canvas.width = W; this.canvas.height = H;
+      this.canvas.style.width = L.w + "px"; this.canvas.style.height = L.h + "px";
+      this.canvas.setAttribute("aria-label", spec.aria || "");
+
+      const out = [];
+      const grid = rgba(cssVar("--grid"));
+      for (const t of spec.yTicks || []) pushSegment(out, L.pad.l, L.sy(t.v), L.w - L.pad.r, L.sy(t.v), 1, grid);
+      this.hits = [];
+      for (const m of spec.marks) {
+        if (m.type === "hband") {
+          pushQuad(out, L.pad.l, L.sy(m.y0), L.w - L.pad.r, L.sy(m.y1), rgba(m.color, m.alpha ?? 1), -1);
+        } else if (m.type === "rect") {
+          for (const it of m.items) {
+            const x0 = L.sx(it.x0), x1 = L.sx(it.x1), y0 = L.sy(it.y0), y1 = L.sy(it.y1);
+            let c = rgba(it.color, it.alpha);
+            if (this.hover && this.hover.item === it) c = mix(c, rgba(cssVar("--text-1")), 0.25);
+            pushQuad(out, x0, y0, x1, y1, c, it.round ?? (m.round ?? 0));
+            if (it.tip) this.hits.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), y0: Math.min(y0, y1), y1: Math.max(y0, y1), item: it, band: m.hitBand });
+          }
+        } else if (m.type === "line") {
+          const c = rgba(m.color), w = m.width || 2;
+          const pts = m.points.map(([x, y]) => [L.sx(x), L.sy(y)]);
+          for (let i = 1; i < pts.length; i++) pushSegment(out, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], w, c);
+          if (m.tips) pts.forEach((p, i) => this.hits.push({ point: p, item: { tip: m.tips[i] }, line: true }));
+          if (m.dots) for (const p of pts) pushQuad(out, p[0] - 4, p[1] - 4, p[0] + 4, p[1] + 4, c, 4);
+        } else if (m.type === "hline") {
+          const c = rgba(m.color), y = L.sy(m.y), w = m.width || 1.5;
+          if (m.dash) {
+            for (let x = L.pad.l; x < L.w - L.pad.r; x += 10) pushSegment(out, x, y, Math.min(x + 5, L.w - L.pad.r), y, w, c);
+          } else pushSegment(out, L.pad.l, y, L.w - L.pad.r, y, w, c);
+        } else if (m.type === "vline") {
+          const c = rgba(m.color), x = L.sx(m.x);
+          pushSegment(out, x, L.pad.t, x, L.h - L.pad.b, m.width || 2, c);
+        }
+      }
+      // crosshair for line charts
+      if (this.hover && this.hover.line) {
+        pushSegment(out, this.hover.point[0], L.pad.t, this.hover.point[0], L.h - L.pad.b, 1, rgba(cssVar("--text-3")));
+        const p = this.hover.point;
+        pushQuad(out, p[0] - 5, p[1] - 5, p[0] + 5, p[1] + 5, rgba(cssVar("--surface-1")), 5);
+        pushQuad(out, p[0] - 4, p[1] - 4, p[0] + 4, p[1] + 4, rgba(cssVar("--series-1")), 4);
+      }
+
+      // WebGL pass (coordinates in CSS px, scaled by dpr)
+      glCanvas.width = W; glCanvas.height = H;
+      gl.viewport(0, 0, W, H);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      const data = new Float32Array(out.map((v, i) => { const k = i % 11; return k < 2 || (k >= 6 && k < 10) || k === 10 && v > 0 ? v * dpr : v; }));
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STREAM_DRAW);
+      const S = 11 * 4;
+      gl.enableVertexAttribArray(loc.pos); gl.vertexAttribPointer(loc.pos, 2, gl.FLOAT, false, S, 0);
+      gl.enableVertexAttribArray(loc.color); gl.vertexAttribPointer(loc.color, 4, gl.FLOAT, false, S, 8);
+      gl.enableVertexAttribArray(loc.rect); gl.vertexAttribPointer(loc.rect, 4, gl.FLOAT, false, S, 24);
+      gl.enableVertexAttribArray(loc.radius); gl.vertexAttribPointer(loc.radius, 1, gl.FLOAT, false, S, 40);
+      gl.uniform2f(loc.size, W, H);
+      gl.drawArrays(gl.TRIANGLES, 0, data.length / 11);
+
+      const ctx = this.canvas.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(glCanvas, 0, 0);
+      ctx.scale(dpr, dpr);
+      this.drawAxes(ctx, spec, L);
+      this.drawLegend(spec);
+    }
+
+    drawAxes(ctx, spec, L) {
+      ctx.font = "11px ui-sans-serif, system-ui, -apple-system, sans-serif";
+      ctx.fillStyle = cssVar("--text-2");
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      for (const t of spec.yTicks || []) ctx.fillText(t.label, L.pad.l - 6, L.sy(t.v));
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      let lastRight = -Infinity;
+      for (const t of spec.xTicks || []) {
+        const x = L.sx(t.v), w = ctx.measureText(t.label).width;
+        if (x - w / 2 < lastRight + 4) continue; // skip colliding labels
+        ctx.fillText(t.label, x, L.h - L.pad.b + 6);
+        lastRight = x + w / 2;
+      }
+      if (spec.yLeftLabels) { // categorical y labels (heatmap rows)
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        for (const t of spec.yLeftLabels) ctx.fillText(t.label, L.pad.l - 6, L.sy(t.v));
+      }
+      ctx.fillStyle = cssVar("--text-3");
+      if (spec.xTitle) { ctx.textAlign = "right"; ctx.textBaseline = "bottom"; ctx.fillText(spec.xTitle, L.w - L.pad.r, L.h - 1); }
+      if (spec.yTitle) { ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText(spec.yTitle, 2, 0); }
+    }
+
+    drawLegend(spec) {
+      this.legendEl.innerHTML = (spec.legend || []).map((l) =>
+        `<span class="lg"><i class="lg-${l.kind || "swatch"}" style="--c:${l.color}"></i>${l.label}</span>`).join("");
+    }
+
+    onMove(e) {
+      if (!this.hits) return;
+      const r = this.canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      let best = null, bestD = Infinity;
+      for (const h of this.hits) {
+        let d;
+        if (h.line) d = Math.abs(h.point[0] - mx);                                   // crosshair: nearest x
+        else if (h.band) d = mx >= h.x0 - 2 && mx <= h.x1 + 2 ? Math.abs(my - (h.y0 + h.y1) / 2) / 1000 : Infinity; // whole column
+        else d = mx >= h.x0 - 3 && mx <= h.x1 + 3 && my >= h.y0 - 3 && my <= h.y1 + 3 ? 0 : Infinity;
+        if (d < bestD) { bestD = d; best = h; }
+      }
+      const changed = (best && best.item) !== (this.hover && this.hover.item);
+      this.hover = best;
+      if (best) showTip(best.item.tip, e.clientX, e.clientY); else hideTip();
+      if (changed) this.render();
+    }
+  }
+
+  function showTip(html, x, y) {
+    if (!tooltip) { tooltip = document.createElement("div"); tooltip.className = "tooltip"; document.body.appendChild(tooltip); }
+    tooltip.innerHTML = html;
+    tooltip.style.display = "block";
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    const left = x + 14 + tw > window.innerWidth - 8 ? x - tw - 14 : x + 14;
+    tooltip.style.left = Math.max(8, left) + "px";
+    tooltip.style.top = Math.max(8, Math.min(y - th / 2, window.innerHeight - th - 8)) + "px";
+  }
+  function hideTip() { if (tooltip) tooltip.style.display = "none"; }
+
+  function niceTicks(min, max, count = 5, fmt = (v) => v.toLocaleString()) {
+    const span = max - min || 1;
+    const step0 = span / count, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= count) || 10 * mag;
+    const out = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push({ v: +v.toFixed(10), label: fmt(+v.toFixed(10)) });
+    return out;
+  }
+
+  window.WGLCharts = {
+    chart: (el, specFn) => new Chart(el, specFn),
+    renderAll: () => charts.forEach((c) => c.render()),
+    supported: () => initGL(),
+    niceTicks, diverging, cssVar,
+  };
+})();
+</script>
+<script>
+const DATA = {"toto":{"n_draws":208,"first_date":"2024-11-18","last_date":"2026-11-12","draws":[{"no":4027,"date":"2024-11-18","nums":[1,2,14,36,44,46],"add":20,"g1":1232790},{"no":4028,"date":"2024-11-21","nums":[4,7,11,14,21,28],"add":36,"g1":1190423},{"no":4029,"date":"2024-11-25","nums":[26,28,31,38,41,42],"add":23,"g1":1236587},{"no":4030,"date":"2024-11-28","nums":[1,2,4,15,18,24],"add":35,"g1":2900641},{"no":4031,"date":"2024-12-02","nums":[10,11,12,21,41,49],"add":44,"g1":5917621},{"no":4032,"date":"2024-12-05","nums":[8,14,15,20,31,49],"add":13,"g1":1271840},{"no":4033,"date":"2024-12-09","nums":[1,4,8,10,16,46],"add":23,"g1":3106928},{"no":4034,"date":"2024-12-12","nums":[17,18,19,31,32,33],"add":8,"g1":6016350},{"no":4035,"date":"2024-12-16","nums":[13,19,22,26,40,49],"add":45,"g1":1318381},{"no":4036,"date":"2024-12-19","nums":[3,9,10,20,23,32],"add":42,"g1":3064661},{"no":4037,"date":"2024-12-23","nums":[34,40,42,44,45,46],"add":19,"g1":6035966},{"no":4038,"date":"2024-12-26","nums":[8,21,30,35,44,49],"add":39,"g1":1296161},{"no":4039,"date":"2024-12-30","nums":[3,10,13,29,32,46],"add":18,"g1":3231518},{"no":4040,"date":"2025-01-03","nums":[9,11,24,29,39,46],"add":31,"g1":11637633},{"no":4041,"date":"2025-01-06","nums":[6,10,13,27,41,49],"add":4,"g1":1246941},{"no":4042,"date":"2025-01-09","nums":[13,32,34,36,38,40],"add":37,"g1":3032056},{"no":4043,"date":"2025-01-13","nums":[3,7,11,13,34,35],"add":17,"g1":6088704},{"no":4044,"date":"2025-01-16","nums":[6,13,18,27,35,46],"add":48,"g1":1347957},{"no":4045,"date":"2025-01-20","nums":[3,5,6,16,32,49],"add":4,"g1":3378445},{"no":4046,"date":"2025-01-24","nums":[9,10,18,35,43,49],"add":42,"g1":13302177},{"no":4047,"date":"2025-01-27","nums":[7,16,22,26,33,43],"add":44,"g1":1401283},{"no":4048,"date":"2025-01-30","nums":[2,9,13,24,26,43],"add":49,"g1":1482074},{"no":4049,"date":"2025-02-03","nums":[1,12,29,31,41,48],"add":25,"g1":1919191},{"no":4050,"date":"2025-02-07","nums":[16,18,22,23,28,35],"add":32,"g1":12629475},{"no":4051,"date":"2025-02-10","nums":[1,3,7,18,34,39],"add":46,"g1":1427176},{"no":4052,"date":"2025-02-13","nums":[5,8,13,28,30,49],"add":17,"g1":1455213},{"no":4053,"date":"2025-02-17","nums":[1,16,23,39,41,42],"add":9,"g1":1440340},{"no":4054,"date":"2025-02-20","nums":[3,25,31,37,39,42],"add":21,"g1":3249509},{"no":4055,"date":"2025-02-24","nums":[24,37,38,42,48,49],"add":31,"g1":1373831},{"no":4056,"date":"2025-02-27","nums":[2,10,13,15,37,40],"add":28,"g1":3170078},{"no":4057,"date":"2025-03-03","nums":[4,16,24,25,43,49],"add":46,"g1":6326700},{"no":4058,"date":"2025-03-06","nums":[19,33,35,38,46,49],"add":39,"g1":13487329},{"no":4059,"date":"2025-03-10","nums":[5,7,32,38,42,47],"add":27,"g1":1337645},{"no":4060,"date":"2025-03-13","nums":[16,26,34,36,42,49],"add":41,"g1":1299558},{"no":4061,"date":"2025-03-17","nums":[7,30,39,42,43,48],"add":33,"g1":3172134},{"no":4062,"date":"2025-03-20","nums":[9,10,11,13,23,42],"add":20,"g1":1216346},{"no":4063,"date":"2025-03-24","nums":[18,19,25,28,31,44],"add":34,"g1":1301717},{"no":4064,"date":"2025-03-27","nums":[21,22,27,35,40,42],"add":3,"g1":1258790},{"no":4065,"date":"2025-03-31","nums":[9,12,17,23,29,46],"add":20,"g1":3066159},{"no":4066,"date":"2025-04-03","nums":[12,14,15,16,21,40],"add":23,"g1":5973897},{"no":4067,"date":"2025-04-07","nums":[7,19,35,40,43,47],"add":33,"g1":1327382},{"no":4068,"date":"2025-04-10","nums":[14,26,27,30,46,48],"add":10,"g1":1269186},{"no":4069,"date":"2025-04-14","nums":[6,14,29,30,35,42],"add":25,"g1":3072730},{"no":4070,"date":"2025-04-17","nums":[15,17,26,31,40,46],"add":19,"g1":1227674},{"no":4071,"date":"2025-04-21","nums":[1,17,30,37,41,43],"add":32,"g1":3004923},{"no":4072,"date":"2025-04-24","nums":[17,19,21,23,30,40],"add":33,"g1":5822176},{"no":4073,"date":"2025-04-28","nums":[3,8,12,18,24,41],"add":11,"g1":12929450},{"no":4074,"date":"2025-05-01","nums":[2,8,12,30,35,49],"add":38,"g1":1216780},{"no":4075,"date":"2025-05-05","nums":[5,8,28,38,40,43],"add":39,"g1":3098454},{"no":4076,"date":"2025-05-08","nums":[9,13,17,39,46,47],"add":22,"g1":1259988},{"no":4077,"date":"2025-05-12","nums":[6,16,20,23,40,48],"add":45,"g1":3140877},{"no":4078,"date":"2025-05-15","nums":[9,16,17,20,34,38],"add":18,"g1":6029737},{"no":4079,"date":"2025-05-19","nums":[2,15,17,18,39,45],"add":26,"g1":1279986},{"no":4080,"date":"2025-05-22","nums":[3,10,32,34,44,48],"add":29,"g1":1235330},{"no":4081,"date":"2025-05-26","nums":[5,9,15,28,46,48],"add":8,"g1":3070605},{"no":4082,"date":"2025-05-29","nums":[1,5,7,11,19,47],"add":44,"g1":5910309},{"no":4083,"date":"2025-06-02","nums":[10,19,21,22,28,31],"add":34,"g1":1295741},{"no":4084,"date":"2025-06-05","nums":[2,5,25,26,29,30],"add":42,"g1":1262313},{"no":4085,"date":"2025-06-09","nums":[7,10,11,21,32,48],"add":27,"g1":1296208},{"no":4086,"date":"2025-06-12","nums":[3,7,38,41,44,49],"add":20,"g1":2927384},{"no":4087,"date":"2025-06-16","nums":[5,18,27,32,48,49],"add":21,"g1":5614761},{"no":4088,"date":"2025-06-19","nums":[1,10,37,40,45,47],"add":19,"g1":12323051},{"no":4089,"date":"2025-06-23","nums":[2,15,29,37,45,49],"add":24,"g1":1176309},{"no":4090,"date":"2025-06-26","nums":[10,26,28,35,37,46],"add":20,"g1":2803451},{"no":4091,"date":"2025-06-30","nums":[11,27,31,33,34,36],"add":13,"g1":1228144},{"no":4092,"date":"2025-07-03","nums":[6,15,16,17,25,34],"add":31,"g1":2894419},{"no":4093,"date":"2025-07-07","nums":[10,15,17,33,36,45],"add":34,"g1":1231037},{"no":4094,"date":"2025-07-10","nums":[12,21,26,27,35,44],"add":10,"g1":2913763},{"no":4095,"date":"2025-07-14","nums":[2,8,19,29,38,41],"add":20,"g1":5792345},{"no":4096,"date":"2025-07-17","nums":[7,8,17,29,32,42],"add":1,"g1":12766543},{"no":4097,"date":"2025-07-21","nums":[2,5,10,12,14,37],"add":17,"g1":1251417},{"no":4098,"date":"2025-07-24","nums":[9,11,24,32,39,49],"add":26,"g1":2962788},{"no":4099,"date":"2025-07-28","nums":[2,14,16,21,36,47],"add":1,"g1":5853782},{"no":4100,"date":"2025-07-31","nums":[7,19,20,21,22,29],"add":37,"g1":12827485},{"no":4101,"date":"2025-08-04","nums":[30,32,40,43,45,49],"add":5,"g1":1343651},{"no":4102,"date":"2025-08-08","nums":[2,15,28,39,42,44],"add":5,"g1":5527890},{"no":4103,"date":"2025-08-11","nums":[9,24,31,34,43,44],"add":1,"g1":1199651},{"no":4104,"date":"2025-08-14","nums":[22,25,29,31,34,43],"add":11,"g1":2980746},{"no":4105,"date":"2025-08-18","nums":[1,4,18,24,37,42],"add":26,"g1":1258912},{"no":4106,"date":"2025-08-21","nums":[4,13,22,36,38,46],"add":12,"g1":2974742},{"no":4107,"date":"2025-08-25","nums":[2,3,4,16,22,39],"add":48,"g1":5812259},{"no":4108,"date":"2025-08-28","nums":[10,11,16,24,34,35],"add":1,"g1":12528186},{"no":4109,"date":"2025-09-01","nums":[3,4,8,13,14,17],"add":20,"g1":1260079},{"no":4110,"date":"2025-09-04","nums":[8,12,21,38,40,43],"add":25,"g1":3074780},{"no":4111,"date":"2025-09-08","nums":[1,3,33,38,39,42],"add":31,"g1":1306245},{"no":4112,"date":"2025-09-11","nums":[2,15,19,35,41,48],"add":33,"g1":1227974},{"no":4113,"date":"2025-09-15","nums":[10,19,25,29,33,37],"add":24,"g1":2956471},{"no":4114,"date":"2025-09-18","nums":[6,8,9,20,45,49],"add":21,"g1":1236374},{"no":4115,"date":"2025-09-22","nums":[8,15,22,24,43,47],"add":44,"g1":3008745},{"no":4116,"date":"2025-09-25","nums":[1,6,9,11,29,36],"add":12,"g1":5655940},{"no":4117,"date":"2025-09-29","nums":[15,16,22,34,35,43],"add":26,"g1":12291552},{"no":4118,"date":"2025-10-02","nums":[19,22,26,37,40,46],"add":14,"g1":1245465},{"no":4119,"date":"2025-10-06","nums":[10,15,22,31,42,48],"add":4,"g1":3125455},{"no":4120,"date":"2025-10-09","nums":[13,14,19,22,31,42],"add":41,"g1":5979660},{"no":4121,"date":"2025-10-13","nums":[5,31,33,34,38,46],"add":39,"g1":1307713},{"no":4122,"date":"2025-10-16","nums":[2,4,8,19,35,39],"add":7,"g1":3026562},{"no":4123,"date":"2025-10-20","nums":[3,10,13,15,32,37],"add":8,"g1":5816118},{"no":4124,"date":"2025-10-23","nums":[7,14,17,18,31,38],"add":46,"g1":12427689},{"no":4125,"date":"2025-10-27","nums":[4,12,14,24,36,38],"add":17,"g1":1251199},{"no":4126,"date":"2025-10-30","nums":[1,5,31,34,38,45],"add":21,"g1":2962292},{"no":4127,"date":"2025-11-03","nums":[10,19,22,34,39,43],"add":35,"g1":5836580},{"no":4128,"date":"2025-11-06","nums":[3,20,24,29,32,44],"add":46,"g1":12286495},{"no":4129,"date":"2025-11-10","nums":[2,11,12,19,25,36],"add":16,"g1":1285138},{"no":4130,"date":"2025-11-13","nums":[6,13,18,22,34,35],"add":40,"g1":3039287},{"no":4131,"date":"2025-11-17","nums":[3,9,12,18,19,34],"add":24,"g1":1265445},{"no":4132,"date":"2025-11-20","nums":[11,13,22,31,47,49],"add":39,"g1":2993324},{"no":4133,"date":"2025-11-24","nums":[8,25,27,34,45,47],"add":19,"g1":1242224},{"no":4134,"date":"2025-11-27","nums":[6,8,17,28,32,46],"add":16,"g1":2867460},{"no":4135,"date":"2025-12-01","nums":[2,10,24,35,45,49],"add":37,"g1":1240259},{"no":4136,"date":"2025-12-04","nums":[1,5,24,36,41,46],"add":39,"g1":2911458},{"no":4137,"date":"2025-12-08","nums":[9,12,15,23,27,47],"add":45,"g1":1257083},{"no":4138,"date":"2025-12-11","nums":[6,11,20,28,33,43],"add":16,"g1":2933089},{"no":4139,"date":"2025-12-15","nums":[17,21,22,35,37,42],"add":9,"g1":1231419},{"no":4140,"date":"2025-12-18","nums":[2,14,15,30,31,43],"add":27,"g1":1216701},{"no":4141,"date":"2025-12-22","nums":[4,5,13,22,24,30],"add":36,"g1":2920757},{"no":4142,"date":"2025-12-25","nums":[3,8,15,28,37,43],"add":49,"g1":5573082},{"no":4143,"date":"2025-12-29","nums":[2,4,22,24,30,33],"add":49,"g1":1336997},{"no":4144,"date":"2026-01-02","nums":[11,18,20,32,38,39],"add":34,"g1":7960105},{"no":4145,"date":"2026-01-05","nums":[5,20,35,39,40,49],"add":27,"g1":1206430},{"no":4146,"date":"2026-01-08","nums":[3,14,15,17,25,27],"add":31,"g1":2923900},{"no":4147,"date":"2026-01-12","nums":[1,9,16,18,35,43],"add":12,"g1":1291824},{"no":4148,"date":"2026-01-15","nums":[16,32,34,35,36,41],"add":14,"g1":1250153},{"no":4149,"date":"2026-01-19","nums":[4,11,21,23,31,35],"add":48,"g1":1274136},{"no":4150,"date":"2026-01-22","nums":[6,22,27,32,37,44],"add":19,"g1":2961924},{"no":4151,"date":"2026-01-26","nums":[10,11,13,26,32,39],"add":44,"g1":5926661},{"no":4152,"date":"2026-01-29","nums":[11,13,16,31,42,48],"add":21,"g1":13524372},{"no":4153,"date":"2026-02-02","nums":[4,19,40,41,46,47],"add":20,"g1":1319721},{"no":4154,"date":"2026-02-05","nums":[6,18,24,26,36,48],"add":5,"g1":3225180},{"no":4155,"date":"2026-02-09","nums":[10,15,29,31,33,49],"add":30,"g1":6527079},{"no":4156,"date":"2026-02-13","nums":[10,15,25,43,45,49],"add":4,"g1":6188268},{"no":4157,"date":"2026-02-16","nums":[13,24,28,34,37,44],"add":29,"g1":1487895},{"no":4158,"date":"2026-02-19","nums":[8,16,17,34,38,48],"add":25,"g1":1474367},{"no":4159,"date":"2026-02-23","nums":[24,26,30,32,37,47],"add":2,"g1":1787436},{"no":4160,"date":"2026-02-27","nums":[5,9,20,23,45,46],"add":7,"g1":12000001},{"no":4161,"date":"2026-03-02","nums":[6,8,28,37,41,49],"add":40,"g1":1327704},{"no":4162,"date":"2026-03-05","nums":[1,5,12,15,22,42],"add":37,"g1":3183364},{"no":4163,"date":"2026-03-09","nums":[7,13,14,17,40,44],"add":35,"g1":1375057},{"no":4164,"date":"2026-03-12","nums":[12,25,33,40,43,46],"add":21,"g1":3159706},{"no":4165,"date":"2026-03-16","nums":[6,14,18,22,35,36],"add":13,"g1":1300017},{"no":4166,"date":"2026-03-19","nums":[3,27,34,35,38,49],"add":17,"g1":1259430},{"no":4167,"date":"2026-03-23","nums":[4,25,28,33,43,48],"add":31,"g1":1268072},{"no":4168,"date":"2026-03-26","nums":[4,7,22,29,33,46],"add":48,"g1":1247841},{"no":4169,"date":"2026-03-30","nums":[4,12,26,30,46,47],"add":6,"g1":2962260},{"no":4170,"date":"2026-04-02","nums":[1,7,8,23,30,33],"add":21,"g1":5715685},{"no":4171,"date":"2026-04-06","nums":[14,23,29,30,39,48],"add":12,"g1":1253943},{"no":4172,"date":"2026-04-09","nums":[1,2,6,9,44,48],"add":24,"g1":2971831},{"no":4173,"date":"2026-04-13","nums":[4,8,10,15,16,26],"add":17,"g1":1267460},{"no":4174,"date":"2026-04-16","nums":[1,3,6,12,21,41],"add":18,"g1":1239943},{"no":4175,"date":"2026-04-20","nums":[3,5,9,23,43,49],"add":8,"g1":2980914},{"no":4176,"date":"2026-04-23","nums":[3,5,15,23,37,42],"add":48,"g1":1228056},{"no":4177,"date":"2026-04-27","nums":[3,11,13,22,28,48],"add":21,"g1":2942054},{"no":4178,"date":"2026-04-30","nums":[2,6,7,31,35,39],"add":15,"g1":5742496},{"no":4179,"date":"2026-05-04","nums":[7,18,19,30,36,48],"add":11,"g1":12813283},{"no":4180,"date":"2026-05-07","nums":[2,3,8,16,20,47],"add":10,"g1":1218611},{"no":4181,"date":"2026-05-11","nums":[6,10,25,26,34,40],"add":30,"g1":3040270},{"no":4182,"date":"2026-05-14","nums":[4,8,21,25,43,46],"add":32,"g1":1242409},{"no":4183,"date":"2026-05-18","nums":[7,18,32,37,41,44],"add":19,"g1":3009849},{"no":4184,"date":"2026-05-21","nums":[11,18,25,36,39,49],"add":41,"g1":1221934},{"no":4185,"date":"2026-05-25","nums":[11,12,24,33,38,46],"add":30,"g1":2970638},{"no":4186,"date":"2026-05-28","nums":[10,13,30,35,38,44],"add":15,"g1":5703273},{"no":4187,"date":"2026-06-01","nums":[2,19,26,29,33,36],"add":21,"g1":1284991},{"no":4188,"date":"2026-06-04","nums":[3,5,20,23,26,27],"add":28,"g1":2995540},{"no":4189,"date":"2026-06-08","nums":[10,15,28,39,40,46],"add":12,"g1":1248645},{"no":4190,"date":"2026-06-11","nums":[14,16,21,22,35,38],"add":36,"g1":2906113},{"no":4191,"date":"2026-06-15","nums":[9,16,27,28,32,49],"add":18,"g1":1244637},{"no":4192,"date":"2026-06-18","nums":[2,7,11,19,20,42],"add":23,"g1":2883645},{"no":4193,"date":"2026-06-22","nums":[4,11,15,16,21,39],"add":20,"g1":5624442},{"no":4194,"date":"2026-06-25","nums":[4,21,23,28,31,39],"add":41,"g1":1195425},{"no":4195,"date":"2026-06-29","nums":[6,11,22,23,31,34],"add":14,"g1":2955939},{"no":4196,"date":"2026-07-02","nums":[5,7,11,37,46,49],"add":16,"g1":1206978},{"no":4197,"date":"2026-07-06","nums":[8,25,34,37,39,46],"add":44,"g1":2969336},{"no":4198,"date":"2026-07-09","nums":[23,27,31,38,42,47],"add":29,"g1":5716108},{"no":4199,"date":"2026-07-13","nums":[14,22,32,33,36,46],"add":42,"g1":12817992},{"no":4200,"date":"2026-07-16","nums":[6,27,28,41,43,44],"add":19,"g1":1187340},{"no":4201,"date":"2026-07-20","nums":[1,8,11,14,33,43],"add":44,"g1":1247582},{"no":4202,"date":"2026-07-23","nums":[8,11,17,21,37,48],"add":35,"g1":2921709},{"no":4203,"date":"2026-07-27","nums":[22,23,30,36,44,48],"add":28,"g1":5900838},{"no":4204,"date":"2026-07-30","nums":[4,7,16,23,30,32],"add":8,"g1":1248517},{"no":4205,"date":"2026-08-03","nums":[9,29,30,35,36,40],"add":11,"g1":3109875},{"no":4206,"date":"2026-08-07","nums":[5,7,30,33,36,46],"add":44,"g1":5134521},{"no":4207,"date":"2026-08-10","nums":[3,6,17,32,33,39],"add":7,"g1":1235039},{"no":4208,"date":"2026-08-13","nums":[4,11,22,32,40,49],"add":37,"g1":2926834},{"no":4209,"date":"2026-08-17","nums":[9,16,22,24,33,47],"add":8,"g1":1280918},{"no":4210,"date":"2026-08-20","nums":[3,18,19,25,27,48],"add":40,"g1":2953462},{"no":4211,"date":"2026-08-24","nums":[13,22,26,38,39,44],"add":6,"g1":5814107},{"no":4212,"date":"2026-08-27","nums":[8,9,14,17,35,40],"add":18,"g1":1242725},{"no":4213,"date":"2026-08-31","nums":[7,26,33,39,41,46],"add":11,"g1":1268219},{"no":4214,"date":"2026-09-03","nums":[29,33,39,42,43,44],"add":49,"g1":2964621},{"no":4215,"date":"2026-09-07","nums":[4,7,13,23,27,32],"add":48,"g1":5903013},{"no":4216,"date":"2026-09-10","nums":[6,16,26,30,39,42],"add":27,"g1":1289305},{"no":4217,"date":"2026-09-14","nums":[6,7,8,16,18,35],"add":31,"g1":3106055},{"no":4218,"date":"2026-09-17","nums":[17,19,23,35,36,39],"add":49,"g1":1248856},{"no":4219,"date":"2026-09-21","nums":[12,29,39,42,43,48],"add":26,"g1":2996242},{"no":4220,"date":"2026-09-24","nums":[7,12,20,25,44,47],"add":2,"g1":5743824},{"no":4221,"date":"2026-09-28","nums":[14,22,25,27,34,37],"add":18,"g1":1298326},{"no":4222,"date":"2026-10-01","nums":[5,8,11,24,26,43],"add":20,"g1":1227210},{"no":4223,"date":"2026-10-05","nums":[3,13,20,30,48,49],"add":23,"g1":1297698},{"no":4224,"date":"2026-10-08","nums":[9,18,24,27,31,35],"add":11,"g1":3000826},{"no":4225,"date":"2026-10-12","nums":[8,18,21,24,30,33],"add":23,"g1":5822870},{"no":4226,"date":"2026-10-15","nums":[9,11,29,41,42,45],"add":14,"g1":1211044},{"no":4227,"date":"2026-10-19","nums":[2,15,19,20,27,30],"add":5,"g1":2928913},{"no":4228,"date":"2026-10-22","nums":[12,17,25,34,43,47],"add":21,"g1":1203482},{"no":4229,"date":"2026-10-26","nums":[4,11,23,39,46,48],"add":12,"g1":1241524},{"no":4230,"date":"2026-10-29","nums":[5,9,19,31,41,48],"add":27,"g1":1192876},{"no":4231,"date":"2026-11-02","nums":[8,10,19,37,40,48],"add":38,"g1":2932367},{"no":4232,"date":"2026-11-05","nums":[6,13,31,34,40,45],"add":20,"g1":5587132},{"no":4233,"date":"2026-11-09","nums":[5,27,29,38,40,43],"add":4,"g1":12198558},{"no":4234,"date":"2026-11-12","nums":[17,24,30,31,44,49],"add":32,"g1":1173235}],"freq":{"50":{"label":"Last 50","draws":50,"observed":[1,3,4,6,6,6,8,8,7,3,11,4,5,5,3,7,6,4,7,5,5,8,9,6,5,6,10,4,6,10,7,6,10,5,7,6,5,6,12,7,4,6,7,7,2,8,4,8,5],"additional":[0,1,0,1,1,1,1,2,0,0,3,2,0,2,1,1,0,3,1,3,2,0,3,0,0,1,2,2,1,1,1,1,0,0,1,1,1,1,0,1,1,1,0,3,0,0,0,1,2],"expected":6.122449,"band_lo":3.0,"band_hi":10.0,"fw_lo":0.0,"fw_hi":14.0},"100":{"label":"Last 100","draws":100,"observed":[7,9,12,15,13,15,14,15,12,9,18,9,11,10,12,13,10,11,9,10,9,16,16,13,12,12,14,10,9,18,12,12,17,10,16,12,13,9,18,12,10,10,16,12,5,15,9,16,13],"additional":[0,2,0,2,2,2,2,3,1,1,4,4,1,3,2,2,2,4,3,4,6,0,3,1,1,1,4,2,2,3,3,2,0,1,2,2,3,1,1,2,2,1,0,4,1,0,0,4,4],"expected":12.244898,"band_lo":7.0,"band_hi":18.0,"fw_lo":3.0,"fw_hi":23.0},"208":{"label":"All draws","draws":208,"observed":[20,25,27,25,24,25,27,31,26,29,31,21,28,22,28,28,24,25,27,17,21,33,23,26,21,23,22,21,23,28,29,27,25,29,33,22,25,25,31,27,20,27,31,22,14,32,18,27,33],"additional":[4,2,1,5,4,2,3,6,2,3,6,6,3,4,2,4,6,6,7,11,10,1,6,4,4,5,6,3,3,3,7,4,4,4,4,3,5,2,6,3,4,4,0,8,3,4,0,6,5],"expected":25.469388,"band_lo":18.0,"band_hi":33.0,"fw_lo":12.0,"fw_hi":41.0}},"windows":["50","100","208"],"bayes":{"fair":0.020408,"threshold":1.1,"alpha":1.0,"n":1248,"per":[{"label":1,"count":20,"mean":0.016191,"lo":0.010058,"hi":0.023733,"p_over":0.04759,"p_under":0.762475},{"label":2,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":3,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":4,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":5,"count":24,"mean":0.019275,"lo":0.012521,"hi":0.027429,"p_over":0.196476,"p_under":0.449644},{"label":6,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":7,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":8,"count":31,"mean":0.024672,"lo":0.016949,"hi":0.033781,"p_over":0.682552,"p_under":0.067177},{"label":9,"count":26,"mean":0.020817,"lo":0.013773,"hi":0.029258,"p_over":0.321592,"p_under":0.298059},{"label":10,"count":29,"mean":0.02313,"lo":0.015671,"hi":0.031979,"p_over":0.542161,"p_under":0.132026},{"label":11,"count":31,"mean":0.024672,"lo":0.016949,"hi":0.033781,"p_over":0.682552,"p_under":0.067177},{"label":12,"count":21,"mean":0.016962,"lo":0.010668,"hi":0.024663,"p_over":0.072054,"p_under":0.691262},{"label":13,"count":28,"mean":0.022359,"lo":0.015036,"hi":0.031075,"p_over":0.467463,"p_under":0.177866},{"label":14,"count":22,"mean":0.017733,"lo":0.011282,"hi":0.025589,"p_over":0.104613,"p_under":0.613245},{"label":15,"count":28,"mean":0.022359,"lo":0.015036,"hi":0.031075,"p_over":0.467463,"p_under":0.177866},{"label":16,"count":28,"mean":0.022359,"lo":0.015036,"hi":0.031075,"p_over":0.467463,"p_under":0.177866},{"label":17,"count":24,"mean":0.019275,"lo":0.012521,"hi":0.027429,"p_over":0.196476,"p_under":0.449644},{"label":18,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":19,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":20,"count":17,"mean":0.013878,"lo":0.008252,"hi":0.020919,"p_over":0.010361,"p_under":0.916237},{"label":21,"count":21,"mean":0.016962,"lo":0.010668,"hi":0.024663,"p_over":0.072054,"p_under":0.691262},{"label":22,"count":33,"mean":0.026214,"lo":0.018235,"hi":0.035575,"p_over":0.798487,"p_under":0.030778},{"label":23,"count":23,"mean":0.018504,"lo":0.0119,"hi":0.026511,"p_over":0.146028,"p_under":0.531554},{"label":24,"count":26,"mean":0.020817,"lo":0.013773,"hi":0.029258,"p_over":0.321592,"p_under":0.298059},{"label":25,"count":21,"mean":0.016962,"lo":0.010668,"hi":0.024663,"p_over":0.072054,"p_under":0.691262},{"label":26,"count":23,"mean":0.018504,"lo":0.0119,"hi":0.026511,"p_over":0.146028,"p_under":0.531554},{"label":27,"count":22,"mean":0.017733,"lo":0.011282,"hi":0.025589,"p_over":0.104613,"p_under":0.613245},{"label":28,"count":21,"mean":0.016962,"lo":0.010668,"hi":0.024663,"p_over":0.072054,"p_under":0.691262},{"label":29,"count":23,"mean":0.018504,"lo":0.0119,"hi":0.026511,"p_over":0.146028,"p_under":0.531554},{"label":30,"count":28,"mean":0.022359,"lo":0.015036,"hi":0.031075,"p_over":0.467463,"p_under":0.177866},{"label":31,"count":29,"mean":0.02313,"lo":0.015671,"hi":0.031979,"p_over":0.542161,"p_under":0.132026},{"label":32,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":33,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":34,"count":29,"mean":0.02313,"lo":0.015671,"hi":0.031979,"p_over":0.542161,"p_under":0.132026},{"label":35,"count":33,"mean":0.026214,"lo":0.018235,"hi":0.035575,"p_over":0.798487,"p_under":0.030778},{"label":36,"count":22,"mean":0.017733,"lo":0.011282,"hi":0.025589,"p_over":0.104613,"p_under":0.613245},{"label":37,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":38,"count":25,"mean":0.020046,"lo":0.013146,"hi":0.028345,"p_over":0.25542,"p_under":0.370862},{"label":39,"count":31,"mean":0.024672,"lo":0.016949,"hi":0.033781,"p_over":0.682552,"p_under":0.067177},{"label":40,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":41,"count":20,"mean":0.016191,"lo":0.010058,"hi":0.023733,"p_over":0.04759,"p_under":0.762475},{"label":42,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":43,"count":31,"mean":0.024672,"lo":0.016949,"hi":0.033781,"p_over":0.682552,"p_under":0.067177},{"label":44,"count":22,"mean":0.017733,"lo":0.011282,"hi":0.025589,"p_over":0.104613,"p_under":0.613245},{"label":45,"count":14,"mean":0.011565,"lo":0.006492,"hi":0.018058,"p_over":0.001381,"p_under":0.981404},{"label":46,"count":32,"mean":0.025443,"lo":0.017591,"hi":0.034679,"p_over":0.744232,"p_under":0.046064},{"label":47,"count":18,"mean":0.014649,"lo":0.008849,"hi":0.021862,"p_over":0.018101,"p_under":0.875839},{"label":48,"count":27,"mean":0.021588,"lo":0.014403,"hi":0.030168,"p_over":0.39307,"p_under":0.233326},{"label":49,"count":33,"mean":0.026214,"lo":0.018235,"hi":0.035575,"p_over":0.798487,"p_under":0.030778}],"bayes_factors":[{"alpha":1.0,"log10_bf_fair":28.1807},{"alpha":10.0,"log10_bf_fair":7.720908},{"alpha":100.0,"log10_bf_fair":0.823247},{"alpha":1000.0,"log10_bf_fair":0.074371}],"p_any_over":1.0,"n_confident_over":0,"n_confident_under":1,"max_ratio_ci":[1.405943,1.92622],"confident_null_mean":0.993},"sums":{"observed":{"counts":[0,0,0,1,1,1,5,8,12,14,12,23,18,25,28,19,20,10,5,1,1,3,0,1,0,0],"edges":[20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,100.0,110.0,120.0,130.0,140.0,150.0,160.0,170.0,180.0,190.0,200.0,210.0,220.0,230.0,240.0,250.0,260.0,270.0,280.0]},"fair":[0.0005,0.0119,0.0788,0.2853,0.7834,1.8314,3.6479,6.4531,10.064,14.3451,18.6711,22.3088,24.239,24.3416,22.4459,19.1679,14.8186,10.5861,6.7461,3.9029,1.9718,0.8645,0.3223,0.0947,0.0157,0.0016],"mean":150.283654,"fair_mean":150.035351},"odd_even":{"label":"Odd numbers per draw","observed":[2,19,41,76,50,18,2],"expected":[2.002026,15.805471,47.416413,69.243016,51.932262,18.966565,2.634245],"chi2":2.290519,"p":0.682496},"low_high":{"label":"Low numbers (1-24) per draw","observed":[4,24,49,56,54,19,2],"expected":[2.634245,18.966565,51.932262,69.243016,47.416413,15.805471,2.002026],"chi2":6.080545,"p":0.193213},"pairs":{"z":[[0.0,0.21,0.21,0.21,0.83,0.21,0.21,0.21,0.21,-0.4,0.21,0.21,-1.63,-0.4,-0.4,0.21,-1.01,0.83,-1.01,-1.63,-1.01,-1.01,-0.4,0.21,-1.63,-1.63,-1.63,-1.63,-0.4,-0.4,-0.4,-1.63,0.21,-0.4,-1.01,0.21,0.21,-0.4,0.21,-1.01,1.44,0.83,0.21,-0.4,-0.4,0.21,-0.4,-0.4,-1.63],[0.21,0.0,-0.4,0.83,-0.4,-0.4,-0.4,0.83,-0.4,0.21,-0.4,0.21,-0.4,0.83,3.28,0.21,-1.01,-0.4,2.67,0.21,-1.01,-0.4,-1.63,0.83,-0.4,0.21,-1.01,-1.01,0.83,1.44,-0.4,-1.63,-0.4,-1.63,1.44,0.83,0.21,-1.01,1.44,-1.01,-0.4,-0.4,-0.4,0.21,0.21,-1.01,-0.4,-0.4,0.21],[0.21,-0.4,0.0,-0.4,0.83,0.21,0.21,0.83,0.21,0.83,-0.4,0.21,2.05,-0.4,0.83,0.21,0.21,0.83,-0.4,1.44,-1.01,-0.4,0.83,-0.4,0.21,-1.01,0.83,-0.4,-0.4,-1.01,-1.01,2.67,-0.4,1.44,-0.4,-1.63,0.83,0.21,1.44,-1.63,0.21,0.21,-0.4,0.21,-1.63,-1.01,-1.01,0.83,1.44],[0.21,0.83,-0.4,0.0,-1.01,-1.63,0.83,1.44,-1.63,-0.4,1.44,-0.4,0.83,0.21,0.21,2.05,-1.01,-0.4,-0.4,-1.63,1.44,2.05,1.44,2.05,0.21,-0.4,-1.01,0.21,-1.01,0.83,-0.4,0.21,0.21,-1.63,-0.4,-0.4,-1.01,-0.4,1.44,-0.4,-1.01,-1.01,0.21,-1.63,-1.63,2.67,-0.4,-0.4,-0.4],[0.83,-0.4,0.83,-1.01,0.0,-1.01,0.83,0.21,0.83,-1.01,0.21,-0.4,-0.4,-1.01,0.21,-1.01,-1.63,-1.01,-0.4,0.21,-1.63,-0.4,0.83,0.21,-1.01,0.21,0.21,0.21,-0.4,0.83,0.21,0.21,-0.4,-0.4,-1.01,-0.4,0.21,1.44,-1.01,0.21,-0.4,0.21,0.83,-1.63,-0.4,2.05,-0.4,0.21,2.05],[0.21,-0.4,0.21,-1.63,-1.01,0.0,-0.4,0.83,0.21,-0.4,0.21,-1.01,0.83,-0.4,-1.01,1.44,0.21,1.44,-1.63,0.21,-1.01,0.83,-0.4,-1.01,-0.4,0.21,0.83,0.83,-0.4,-0.4,0.21,0.83,-0.4,1.44,2.05,0.21,-0.4,-1.63,0.21,0.21,0.83,-0.4,-0.4,0.21,-0.4,-0.4,-1.63,0.21,0.83],[0.21,-0.4,0.21,0.83,0.83,-0.4,0.0,0.21,-1.63,-1.01,2.05,-1.01,0.21,0.21,-1.63,0.21,0.21,1.44,1.44,0.21,0.21,0.21,0.21,-1.63,-1.01,-0.4,-1.01,-1.01,0.21,1.44,-0.4,2.05,1.44,-0.4,0.83,-0.4,-0.4,0.21,0.83,-0.4,0.21,0.83,0.21,0.83,-1.63,0.83,0.83,0.21,-0.4],[0.21,0.83,0.83,1.44,0.21,0.83,0.21,0.0,-0.4,0.21,0.21,0.21,-0.4,0.83,0.83,1.44,2.05,0.21,0.21,0.21,1.44,-1.01,-1.01,0.83,0.21,-0.4,-1.01,1.44,-0.4,1.44,-1.01,-0.4,0.21,0.21,1.44,-1.63,1.44,0.83,-0.4,0.83,0.21,-1.01,2.67,-1.01,-0.4,0.83,0.21,0.21,2.05],[0.21,-0.4,0.21,-1.63,0.83,0.21,-1.63,-0.4,0.0,0.21,1.44,0.21,0.21,-1.01,-0.4,0.83,0.83,0.83,-0.4,0.83,-1.63,-1.01,2.05,2.05,-1.63,-1.01,0.21,-0.4,1.44,-1.01,0.21,0.21,-1.01,0.21,1.44,-0.4,-1.63,-1.01,0.21,-0.4,-0.4,-0.4,1.44,-0.4,0.21,1.44,0.21,0.21,1.44],[-0.4,0.21,0.83,-0.4,-1.01,-0.4,-1.01,0.21,0.21,0.0,1.44,-0.4,2.67,-1.01,3.28,0.21,-1.01,-1.01,0.83,-1.01,0.21,0.21,-0.4,-0.4,0.21,0.83,-1.01,0.21,0.21,-1.01,0.21,2.05,0.21,0.83,1.44,-1.01,2.67,-1.01,0.21,1.44,-0.4,-0.4,0.21,-0.4,0.83,0.83,-1.01,0.83,2.05],[0.21,-0.4,-0.4,1.44,0.21,0.21,2.05,0.21,1.44,1.44,0.0,0.21,2.05,-0.4,-1.01,0.21,-1.01,-0.4,0.21,0.21,2.05,0.83,0.83,1.44,-0.4,-0.4,-1.01,0.21,0.21,-1.63,1.44,1.44,0.83,0.83,0.21,0.83,-0.4,-0.4,2.67,-1.01,-0.4,0.83,0.21,-1.63,-1.01,0.83,-0.4,1.44,2.05],[0.21,0.21,0.21,-0.4,-0.4,-1.01,-1.01,0.21,0.21,-0.4,0.21,0.0,-1.63,0.21,0.21,-1.01,-0.4,-0.4,-0.4,-1.01,1.44,-1.01,-0.4,0.21,0.83,-0.4,-0.4,-1.63,0.21,-0.4,-1.01,-1.63,-0.4,-0.4,-0.4,-0.4,-1.01,0.21,-1.01,0.21,0.83,-0.4,0.83,-0.4,-1.63,0.83,0.83,-0.4,-0.4],[-1.63,-0.4,2.05,0.83,-0.4,0.83,0.21,-0.4,0.21,2.67,2.05,-1.63,0.0,0.21,-0.4,-1.01,0.21,-0.4,-0.4,-1.01,-1.63,3.28,-0.4,0.21,-1.63,0.83,0.21,0.21,-1.01,0.83,0.83,1.44,-1.63,1.44,0.83,-0.4,0.21,0.83,0.21,1.44,-1.01,0.21,-1.01,0.83,-1.01,0.83,-0.4,0.21,1.44],[-0.4,0.83,-0.4,0.21,-1.01,-0.4,0.21,0.83,-1.01,-1.01,-0.4,0.21,0.21,0.0,0.83,0.21,1.44,-0.4,-1.01,-1.01,0.83,1.44,-1.01,-1.01,-0.4,-1.01,0.21,-1.01,-0.4,0.83,0.83,-1.01,-0.4,-1.01,0.83,1.44,-0.4,0.21,-1.01,0.21,-1.63,-0.4,-0.4,-0.4,-1.63,0.21,-1.01,-0.4,-1.01],[-0.4,3.28,0.83,0.21,0.21,-1.01,-1.63,0.83,-0.4,3.28,-1.01,0.21,-0.4,0.83,0.0,1.44,1.44,-0.4,-0.4,-0.4,-0.4,0.83,-0.4,-0.4,0.21,-0.4,0.21,0.83,-0.4,-0.4,1.44,-1.01,-0.4,-0.4,-0.4,-1.01,1.44,-1.63,0.83,0.83,-1.01,0.83,1.44,-1.01,0.83,0.21,-0.4,0.21,0.83],[0.21,0.21,0.21,2.05,-1.01,1.44,0.21,1.44,0.83,0.21,0.21,-1.01,-1.01,0.21,1.44,0.0,0.21,0.21,-1.63,0.21,0.83,2.05,0.83,0.21,-0.4,0.83,-1.01,-0.4,-1.63,-0.4,-1.01,0.83,-0.4,2.67,2.67,0.21,-1.63,0.21,0.83,-0.4,-0.4,0.83,0.83,-1.63,-1.63,-1.01,0.21,0.21,0.83],[-1.01,-1.01,0.21,-1.01,-1.63,0.21,0.21,2.05,0.83,-1.01,-1.01,-0.4,0.21,1.44,1.44,0.21,0.0,0.21,0.21,-1.01,0.21,-1.01,0.21,-1.01,0.21,-1.01,-1.01,-1.01,-0.4,0.21,0.83,0.83,0.21,0.83,0.21,-0.4,0.21,0.21,0.83,0.83,-1.01,-0.4,-0.4,-0.4,-0.4,0.83,-0.4,-0.4,-1.01],[0.83,-0.4,0.83,-0.4,-1.01,1.44,1.44,0.21,0.83,-1.01,-0.4,-0.4,-0.4,-0.4,-0.4,0.21,0.21,0.0,1.44,-1.01,-1.01,0.21,-1.01,2.05,0.21,-1.01,0.83,-0.4,-1.63,-0.4,0.83,0.83,-0.4,0.21,3.28,0.83,-0.4,-0.4,0.83,-1.63,-0.4,-1.01,-0.4,-0.4,-1.01,-1.01,-1.63,0.83,0.21],[-1.01,2.67,-0.4,-0.4,-0.4,-1.63,1.44,0.21,-0.4,0.83,0.21,-0.4,-0.4,-1.01,-0.4,-1.63,0.21,1.44,0.0,0.21,0.21,2.05,-0.4,-1.63,0.83,0.21,-0.4,-0.4,0.83,0.21,1.44,-1.01,0.83,-0.4,1.44,0.83,0.21,-0.4,0.21,2.05,0.83,-0.4,-0.4,-1.01,-1.63,0.21,0.21,1.44,-0.4],[-1.63,0.21,1.44,-1.63,0.21,0.21,0.21,0.21,0.83,-1.01,0.21,-1.01,-1.01,-1.01,-0.4,0.21,-1.01,-1.01,0.21,0.0,-1.01,-1.01,0.83,-1.01,-1.01,-1.01,-0.4,-1.01,-0.4,-0.4,-1.01,0.21,-1.01,-1.01,-1.01,-1.63,-1.63,-0.4,-0.4,-0.4,-1.63,-1.01,-1.01,-0.4,-0.4,-1.01,-0.4,-0.4,0.83],[-1.01,-1.01,-1.01,1.44,-1.63,-1.01,0.21,1.44,-1.63,0.21,2.05,1.44,-1.63,0.83,-0.4,0.83,0.21,-1.01,0.21,-1.01,0.0,1.44,0.21,-1.01,-1.01,-1.01,-0.4,0.21,-1.01,0.21,0.21,-1.01,-1.01,-1.63,2.05,-1.01,-0.4,-0.4,-0.4,0.83,-0.4,-0.4,-0.4,-0.4,-1.63,-1.01,-1.01,-0.4,-0.4],[-1.01,-0.4,-0.4,2.05,-0.4,0.83,0.21,-1.01,-1.01,0.21,0.83,-1.01,3.28,1.44,0.83,2.05,-1.01,0.21,2.05,-1.01,1.44,0.0,0.21,0.83,-0.4,0.83,0.21,0.21,0.21,0.21,2.05,0.21,1.44,2.05,2.67,0.83,0.83,0.21,0.21,0.83,-1.63,1.44,1.44,0.21,-1.63,0.83,0.21,0.21,0.21],[-0.4,-1.63,0.83,1.44,0.83,-0.4,0.21,-1.01,2.05,-0.4,0.83,-0.4,-0.4,-1.01,-0.4,0.83,0.21,-1.01,-0.4,0.83,0.21,0.21,0.0,-1.63,-1.63,-1.01,0.83,-0.4,-0.4,1.44,0.83,0.21,-1.01,-1.01,0.21,-0.4,-1.01,-1.01,1.44,-0.4,-1.01,0.83,-1.01,-1.01,-1.01,0.21,-0.4,0.83,-1.01],[0.21,0.83,-0.4,2.05,0.21,-1.01,-1.63,0.83,2.05,-0.4,1.44,0.21,0.21,-1.01,-0.4,0.21,-1.01,2.05,-1.63,-1.01,-1.01,0.83,-1.63,0.0,-1.01,0.83,-1.01,-1.01,-0.4,1.44,0.21,0.21,0.83,0.21,0.21,0.21,0.83,0.21,-0.4,-1.63,-0.4,-0.4,1.44,0.83,-1.01,0.21,0.21,-0.4,1.44],[-1.63,-0.4,0.21,0.21,-1.01,-0.4,-1.01,0.21,-1.63,0.21,-0.4,0.83,-1.63,-0.4,0.21,-0.4,0.21,0.21,0.83,-1.01,-1.01,-0.4,-1.63,-1.01,0.0,-0.4,0.83,-0.4,0.21,-1.01,0.21,-1.63,0.21,2.67,-1.63,-0.4,0.83,-1.63,0.21,-0.4,-1.63,-1.01,2.67,-0.4,-0.4,0.21,0.21,-0.4,0.21],[-1.63,0.21,-1.01,-0.4,0.21,0.21,-0.4,-0.4,-1.01,0.83,-0.4,-0.4,0.83,-1.01,-0.4,0.83,-1.01,-1.01,0.21,-1.01,-1.01,0.83,-1.01,0.83,-0.4,0.0,0.21,-0.4,-0.4,1.44,-0.4,-0.4,0.21,-0.4,-0.4,0.21,0.21,-0.4,0.83,0.83,-0.4,0.21,0.21,-0.4,-1.63,2.05,-0.4,-0.4,-0.4],[-1.63,-1.01,0.83,-1.01,0.21,0.83,-1.01,-1.01,0.21,-1.01,-1.01,-0.4,0.21,0.21,0.21,-1.01,-1.01,0.83,-0.4,-0.4,-0.4,0.21,0.83,-1.01,0.83,0.21,0.0,-0.4,-1.01,-0.4,0.21,0.83,-1.01,0.83,1.44,-1.01,-0.4,0.21,-1.63,-0.4,-0.4,-0.4,-0.4,0.21,-1.01,-0.4,0.21,0.21,0.83],[-1.63,-1.01,-0.4,0.21,0.21,0.83,-1.01,1.44,-0.4,0.21,0.21,-1.63,0.21,-1.01,0.83,-0.4,-1.01,-0.4,-0.4,-1.01,0.21,0.21,-0.4,-1.01,-0.4,-0.4,-0.4,0.0,-1.63,-1.01,0.83,-0.4,-0.4,-1.01,-0.4,-1.63,0.83,-0.4,0.21,-0.4,0.21,-0.4,1.44,0.83,-1.63,0.83,-1.63,0.21,0.21],[-0.4,0.83,-0.4,-1.01,-0.4,-0.4,0.21,-0.4,1.44,0.21,0.21,0.21,-1.01,-0.4,-0.4,-1.63,-0.4,-1.63,0.83,-0.4,-1.01,0.21,-0.4,-0.4,0.21,-0.4,-1.01,-1.63,0.0,0.83,0.21,0.21,1.44,-1.01,-0.4,0.21,-0.4,-0.4,0.83,-0.4,0.21,1.44,0.83,-0.4,-0.4,0.83,-1.63,0.21,-0.4],[-0.4,1.44,-1.01,0.83,0.83,-0.4,1.44,1.44,-1.01,-1.01,-1.63,-0.4,0.83,0.83,-0.4,-0.4,0.21,-0.4,0.21,-0.4,0.21,0.21,1.44,1.44,-1.01,1.44,-0.4,-1.01,0.83,0.0,-0.4,0.21,0.83,-1.63,1.44,0.83,-0.4,-1.01,0.21,0.21,-1.01,0.21,0.83,0.83,-1.01,0.21,-0.4,2.05,2.05],[-0.4,-0.4,-1.01,-0.4,0.21,0.21,-0.4,-1.01,0.21,0.21,1.44,-1.01,0.83,0.83,1.44,-1.01,0.83,0.83,1.44,-1.01,0.21,2.05,0.83,0.21,0.21,-0.4,0.21,0.83,0.21,-0.4,0.0,-1.01,0.83,2.67,0.21,-1.01,-1.01,1.44,0.21,-0.4,0.21,2.05,0.21,0.21,-0.4,-0.4,-0.4,0.83,0.83],[-1.63,-1.63,2.67,0.21,0.21,0.83,2.05,-0.4,0.21,2.05,1.44,-1.63,1.44,-1.01,-1.01,0.83,0.83,0.83,-1.01,0.21,-1.01,0.21,0.21,0.21,-1.63,-0.4,0.83,-0.4,0.21,0.21,-1.01,0.0,0.21,0.21,-1.01,0.21,0.83,0.21,0.83,0.21,-0.4,-0.4,-1.01,0.83,-1.01,0.21,-0.4,0.21,2.05],[0.21,-0.4,-0.4,0.21,-0.4,-0.4,1.44,0.21,-1.01,0.21,0.83,-0.4,-1.63,-0.4,-0.4,-0.4,0.21,-0.4,0.83,-1.01,-1.01,1.44,-1.01,0.83,0.21,0.21,-1.01,-0.4,1.44,0.83,0.83,0.21,0.0,-0.4,-1.01,1.44,-1.01,0.83,0.83,-1.01,-1.01,-0.4,2.05,-1.01,-1.01,3.28,-1.01,-1.01,-0.4],[-0.4,-1.63,1.44,-1.63,-0.4,1.44,-0.4,0.21,0.21,0.83,0.83,-0.4,1.44,-1.01,-0.4,2.67,0.83,0.21,-0.4,-1.01,-1.63,2.05,-1.01,0.21,2.67,-0.4,0.83,-1.01,-1.01,-1.63,2.67,0.21,-0.4,0.0,2.05,0.83,0.21,2.05,0.21,0.83,-1.01,-0.4,1.44,0.83,0.83,0.21,-0.4,-0.4,-0.4],[-1.01,1.44,-0.4,-0.4,-1.01,2.05,0.83,1.44,1.44,1.44,0.21,-0.4,0.83,0.83,-0.4,2.67,0.21,3.28,1.44,-1.01,2.05,2.67,0.21,0.21,-1.63,-0.4,1.44,-0.4,-0.4,1.44,0.21,-1.01,-1.01,2.05,0.0,0.83,-0.4,0.83,0.83,1.44,-0.4,0.21,0.83,0.21,-1.01,0.21,-1.01,-1.01,2.67],[0.21,0.83,-1.63,-0.4,-0.4,0.21,-0.4,-1.63,-0.4,-1.01,0.83,-0.4,-0.4,1.44,-1.01,0.21,-0.4,0.83,0.83,-1.63,-1.01,0.83,-0.4,0.21,-0.4,0.21,-1.01,-1.63,0.21,0.83,-1.01,0.21,1.44,0.83,0.83,0.0,-1.63,0.21,-0.4,-0.4,-0.4,-1.01,-1.63,-0.4,-1.01,1.44,-1.01,0.21,-0.4],[0.21,0.21,0.83,-1.01,0.21,-0.4,-0.4,1.44,-1.63,2.67,-0.4,-1.01,0.21,-0.4,1.44,-1.63,0.21,-0.4,0.21,-1.63,-0.4,0.83,-1.01,0.83,0.83,0.21,-0.4,0.83,-0.4,-0.4,-1.01,0.83,-1.01,0.21,-0.4,-1.63,0.0,-1.01,-0.4,0.83,0.21,1.44,-0.4,0.21,-0.4,0.83,-0.4,0.21,0.83],[-0.4,-1.01,0.21,-0.4,1.44,-1.63,0.21,0.83,-1.01,-1.01,-0.4,0.21,0.83,0.21,-1.63,0.21,0.21,-0.4,-0.4,-0.4,-0.4,0.21,-1.01,0.21,-1.63,-0.4,0.21,-0.4,-0.4,-1.01,1.44,0.21,0.83,2.05,0.83,0.21,-1.01,0.0,0.21,0.83,0.21,1.44,0.21,0.21,-1.01,0.83,-0.4,-0.4,0.83],[0.21,1.44,1.44,1.44,-1.01,0.21,0.83,-0.4,0.21,0.21,2.67,-1.01,0.21,-1.01,0.83,0.83,0.83,0.83,0.21,-0.4,-0.4,0.21,1.44,-0.4,0.21,0.83,-1.63,0.21,0.83,0.21,0.21,0.83,0.83,0.21,0.83,-0.4,-0.4,0.21,0.0,-0.4,-0.4,3.28,0.83,0.21,-1.01,2.05,-1.01,0.83,0.21],[-1.01,-1.01,-1.63,-0.4,0.21,0.21,-0.4,0.83,-0.4,1.44,-1.01,0.21,1.44,0.21,0.83,-0.4,0.83,-1.63,2.05,-0.4,0.83,0.83,-0.4,-1.63,-0.4,0.83,-0.4,-0.4,-0.4,0.21,-0.4,0.21,-1.01,0.83,1.44,-0.4,0.83,0.83,-0.4,0.0,-1.01,-0.4,2.05,-0.4,0.83,2.05,0.21,-0.4,0.83],[1.44,-0.4,0.21,-1.01,-0.4,0.83,0.21,0.21,-0.4,-0.4,-0.4,0.83,-1.01,-1.63,-1.01,-0.4,-1.01,-0.4,0.83,-1.63,-0.4,-1.63,-1.01,-0.4,-1.63,-0.4,-0.4,0.21,0.21,-1.01,0.21,-0.4,-1.01,-1.01,-0.4,-0.4,0.21,0.21,-0.4,-1.01,0.0,0.21,-0.4,0.21,-1.01,0.21,-1.01,0.21,0.83],[0.83,-0.4,0.21,-1.01,0.21,-0.4,0.83,-1.01,-0.4,-0.4,0.83,-0.4,0.21,-0.4,0.83,0.83,-0.4,-1.01,-0.4,-1.01,-0.4,1.44,0.83,-0.4,-1.01,0.21,-0.4,-0.4,1.44,0.21,2.05,-0.4,-0.4,-0.4,0.21,-1.01,1.44,1.44,3.28,-0.4,0.21,0.0,0.21,0.21,-0.4,-1.01,-0.4,1.44,-0.4],[0.21,-0.4,-0.4,0.21,0.83,-0.4,0.21,2.67,1.44,0.21,0.21,0.83,-1.01,-0.4,1.44,0.83,-0.4,-0.4,-0.4,-1.01,-0.4,1.44,-1.01,1.44,2.67,0.21,-0.4,1.44,0.83,0.83,0.21,-1.01,2.05,1.44,0.83,-1.63,-0.4,0.21,0.83,2.05,-0.4,0.21,0.0,0.21,-0.4,-0.4,0.21,0.21,1.44],[-0.4,0.21,0.21,-1.63,-1.63,0.21,0.83,-1.01,-0.4,-0.4,-1.63,-0.4,0.83,-0.4,-1.01,-1.63,-0.4,-0.4,-1.01,-0.4,-0.4,0.21,-1.01,0.83,-0.4,-0.4,0.21,0.83,-0.4,0.83,0.21,0.83,-1.01,0.83,0.21,-0.4,0.21,0.21,0.21,-0.4,0.21,0.21,0.21,0.0,-1.01,-0.4,-1.01,0.21,0.21],[-0.4,0.21,-1.63,-1.63,-0.4,-0.4,-1.63,-0.4,0.21,0.83,-1.01,-1.63,-1.01,-1.63,0.83,-1.63,-0.4,-1.01,-1.63,-0.4,-1.63,-1.63,-1.01,-1.01,-0.4,-1.63,-1.01,-1.63,-0.4,-1.01,-0.4,-1.01,-1.01,0.83,-1.01,-1.01,-0.4,-1.01,-1.01,0.83,-1.01,-0.4,-0.4,-1.01,0.0,-0.4,-0.4,-1.63,1.44],[0.21,-1.01,-1.01,2.67,2.05,-0.4,0.83,0.83,1.44,0.83,0.83,0.83,0.83,0.21,0.21,-1.01,0.83,-1.01,0.21,-1.01,-1.01,0.83,0.21,0.21,0.21,2.05,-0.4,0.83,0.83,0.21,-0.4,0.21,3.28,0.21,0.21,1.44,0.83,0.83,2.05,2.05,0.21,-1.01,-0.4,-0.4,-0.4,0.0,0.21,0.21,-0.4],[-0.4,-0.4,-1.01,-0.4,-0.4,-1.63,0.83,0.21,0.21,-1.01,-0.4,0.83,-0.4,-1.01,-0.4,0.21,-0.4,-1.63,0.21,-0.4,-1.01,0.21,-0.4,0.21,0.21,-0.4,0.21,-1.63,-1.63,-0.4,-0.4,-0.4,-1.01,-0.4,-1.01,-1.01,-0.4,-0.4,-1.01,0.21,-1.01,-0.4,0.21,-1.01,-0.4,0.21,0.0,-1.63,-1.01],[-0.4,-0.4,0.83,-0.4,0.21,0.21,0.21,0.21,0.21,0.83,1.44,-0.4,0.21,-0.4,0.21,0.21,-0.4,0.83,1.44,-0.4,-0.4,0.21,0.83,-0.4,-0.4,-0.4,0.21,0.21,0.21,2.05,0.83,0.21,-1.01,-0.4,-1.01,0.21,0.21,-0.4,0.83,-0.4,0.21,1.44,0.21,0.21,-1.63,0.21,-1.63,0.0,0.21],[-1.63,0.21,1.44,-0.4,2.05,0.83,-0.4,2.05,1.44,2.05,2.05,-0.4,1.44,-1.01,0.83,0.83,-1.01,0.21,-0.4,0.83,-0.4,0.21,-1.01,1.44,0.21,-0.4,0.83,0.21,-0.4,2.05,0.83,2.05,-0.4,-0.4,2.67,-0.4,0.83,0.83,0.21,0.83,0.83,-0.4,1.44,0.21,1.44,-0.4,-1.01,0.21,0.0]],"expected":2.653061,"top":[{"a":18,"b":35,"count":8},{"a":10,"b":15,"count":8},{"a":2,"b":15,"count":8},{"a":33,"b":46,"count":8},{"a":39,"b":42,"count":8},{"a":13,"b":22,"count":8},{"a":2,"b":19,"count":7},{"a":11,"b":39,"count":7},{"a":10,"b":37,"count":7},{"a":25,"b":43,"count":7}]},"gaps":{"observed":[154.0,130.0,115.0,103.0,81.0,74.0,65.0,65.0,49.0,51.0,38.0,33.0,34.0,31.0,26.0,27.0,16.0,16.0,12.0,7.0,72.0],"expected":[146.816327,128.838817,113.062635,99.218231,87.06906,76.407542,67.051517,58.841127,51.636091,45.313304,39.764737,34.895585,30.622656,26.872943,23.582379,20.694741,18.160691,15.936933,13.985472,12.272965,87.956248],"labels":["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21+"]},"tests":[{"id":"chi2","name":"Number frequency (chi-square)","stat":34.794872,"p_classic":0.92309,"p_mc":0.827417,"question":"Do some numbers come up more often than others?","p":0.827417,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"max_count","name":"Hottest number (max count)","stat":33.0,"p_classic":null,"p_mc":0.990801,"question":"Is the most frequent number more frequent than chance allows?","p":0.990801,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"min_count","name":"Coldest number (min count)","stat":14.0,"p_classic":null,"p_mc":0.290471,"question":"Is the least frequent number rarer than chance allows?","p":0.290471,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"rz_sum","name":"Runs test: sum above/below median","stat":-0.417034,"p_classic":0.676654,"p_mc":0.671533,"question":"Do high-sum and low-sum draws cluster in streaks?","p":0.671533,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"rz_odd","name":"Runs test: odd-heavy draws","stat":-0.338911,"p_classic":0.734677,"p_mc":0.734527,"question":"Do odd-heavy draws come in streaks?","p":0.734527,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"ks_sum","name":"Sum distribution (KS vs fair)","stat":0.05416,"p_classic":null,"p_mc":0.474263,"question":"Does the sum of the 6 numbers follow the fair distribution?","p":0.474263,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"lag1","name":"Serial correlation (lag 1)","stat":-0.003493,"p_classic":null,"p_mc":0.890011,"question":"Does a number appearing make it more/less likely next draw?","p":0.890011,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"gap_chi2","name":"Gap test (geometric)","stat":11.649693,"p_classic":0.927606,"p_mc":0.947805,"question":"Are waiting times between repeats of a number memoryless?","p":0.947805,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"max_pair","name":"Most frequent pair","stat":8.0,"p_classic":null,"p_mc":0.9984,"question":"Is any pair of numbers drawn together suspiciously often?","p":0.9984,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"odd","name":"Odd/even split (hypergeometric)","stat":2.290519,"p_classic":0.682496,"p_mc":null,"question":"Is the odd/even balance per draw as expected?","p":0.682496,"q_bh":0.9984,"verdict":"Consistent with fair draws"},{"id":"low","name":"Low/high split (hypergeometric)","stat":6.080545,"p_classic":0.193213,"p_mc":null,"question":"Is the low/high balance per draw as expected?","p":0.193213,"q_bh":0.9984,"verdict":"Consistent with fair draws"}],"null":{"chi2":{"counts":[5,9,18,35,98,124,210,349,449,480,633,693,771,791,744,757,615,625,548,485,392,311,228,160,143,95,72,53,36,27,13,9,9,6,3,0,0,1,2,1],"edges":[18.06891,19.753285,21.43766,23.122035,24.80641,26.490785,28.17516,29.859535,31.54391,33.228285,34.91266,36.597035,38.28141,39.965785,41.65016,43.334535,45.01891,46.703285,48.38766,50.072035,51.75641,53.440785,55.12516,56.809535,58.49391,60.178285,61.86266,63.547035,65.23141,66.915785,68.60016,70.284535,71.96891,73.653285,75.33766,77.022035,78.70641,80.390785,82.07516,83.759535,85.44391]},"max_count":{"counts":[6,0,86,0,503,0,1129,0,1724,0,1781,0,1565,0,1207,0,777,0,524,0,319,0,181,0,98,0,48,0,33,0,12,0,5,0,0,0,0,0,1,1],"edges":[31.0,31.5,32.0,32.5,33.0,33.5,34.0,34.5,35.0,35.5,36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0,40.5,41.0,41.5,42.0,42.5,43.0,43.5,44.0,44.5,45.0,45.5,46.0,46.5,47.0,47.5,48.0,48.5,49.0,49.5,50.0,50.5,51.0]},"min_count":{"counts":[1,0,3,0,0,12,0,0,24,0,0,70,0,0,163,0,0,419,0,0,807,0,1405,0,0,1963,0,0,2291,0,0,1771,0,0,841,0,0,217,0,13],"edges":[6.0,6.35,6.7,7.05,7.4,7.75,8.1,8.45,8.8,9.15,9.5,9.85,10.2,10.55,10.9,11.25,11.6,11.95,12.3,12.65,13.0,13.35,13.7,14.05,14.4,14.75,15.1,15.45,15.8,16.15,16.5,16.85,17.2,17.55,17.9,18.25,18.6,18.95,19.3,19.65,20.0]},"rz_sum":{"counts":[5,4,7,29,24,30,112,99,117,309,190,256,658,385,438,952,564,542,1006,548,537,902,394,327,533,210,192,261,109,83,90,40,12,17,5,6,4,2,0,1],"edges":[-3.33627,-3.15208,-2.96789,-2.7837,-2.59951,-2.41532,-2.23113,-2.04694,-1.862751,-1.678561,-1.494371,-1.310181,-1.125991,-0.941801,-0.757611,-0.573421,-0.389231,-0.205042,-0.020852,0.163338,0.347528,0.531718,0.715908,0.900098,1.084288,1.268477,1.452667,1.636857,1.821047,2.005237,2.189427,2.373617,2.557807,2.741997,2.926186,3.110376,3.294566,3.478756,3.662946,3.847136,4.031326]},"rz_odd":{"counts":[1,1,8,4,12,22,35,33,78,90,148,210,224,348,391,532,553,621,670,724,741,783,622,645,564,495,345,315,252,181,133,104,44,30,17,11,6,4,0,3],"edges":[-3.756778,-3.572108,-3.387439,-3.202769,-3.018099,-2.833429,-2.648759,-2.46409,-2.27942,-2.09475,-1.91008,-1.72541,-1.540741,-1.356071,-1.171401,-0.986731,-0.802061,-0.617392,-0.432722,-0.248052,-0.063382,0.121287,0.305957,0.490627,0.675297,0.859967,1.044636,1.229306,1.413976,1.598646,1.783316,1.967985,2.152655,2.337325,2.521995,2.706665,2.891334,3.076004,3.260674,3.445344,3.630014]},"lag1":{"counts":[1,0,2,1,4,9,17,38,51,83,132,148,240,314,387,437,565,617,723,737,760,754,741,680,570,454,397,316,222,195,150,103,56,40,22,13,8,7,3,3],"edges":[-0.043902,-0.042011,-0.040121,-0.03823,-0.036339,-0.034448,-0.032557,-0.030666,-0.028775,-0.026884,-0.024993,-0.023102,-0.021211,-0.019321,-0.01743,-0.015539,-0.013648,-0.011757,-0.009866,-0.007975,-0.006084,-0.004193,-0.002302,-0.000411,0.001479,0.00337,0.005261,0.007152,0.009043,0.010934,0.012825,0.014716,0.016607,0.018498,0.020388,0.022279,0.02417,0.026061,0.027952,0.029843,0.031734]},"max_pair":{"counts":[16,0,0,0,0,1708,0,0,0,0,4644,0,0,0,0,2673,0,0,0,0,750,0,0,0,0,159,0,0,0,0,46,0,0,0,0,3,0,0,0,1],"edges":[7.0,7.2,7.4,7.6,7.8,8.0,8.2,8.4,8.6,8.8,9.0,9.2,9.4,9.6,9.8,10.0,10.2,10.4,10.6,10.8,11.0,11.200001,11.4,11.6,11.8,12.0,12.200001,12.4,12.6,12.8,13.0,13.200001,13.4,13.6,13.8,14.0,14.200001,14.4,14.6,14.8,15.0]},"gap_chi2":{"counts":[5,18,48,129,233,385,489,622,780,848,860,874,801,719,634,562,474,374,282,240,173,117,82,70,53,35,27,20,16,7,11,2,4,1,2,2,0,0,0,1],"edges":[4.901427,6.187632,7.473837,8.760041,10.046246,11.332451,12.618655,13.90486,15.191065,16.477269,17.763474,19.049679,20.335884,21.622088,22.908293,24.194498,25.480702,26.766907,28.053112,29.339316,30.625521,31.911726,33.19793,34.484135,35.77034,37.056544,38.342749,39.628954,40.915158,42.201363,43.487568,44.773772,46.059977,47.346182,48.632386,49.918591,51.204796,52.491,53.777205,55.06341,56.349615]},"ks_sum":{"counts":[4,14,24,36,63,90,98,125,112,133,125,155,104,118,103,99,95,61,82,61,53,29,47,23,25,21,18,13,12,8,14,7,8,3,6,3,3,2,1,2],"edges":[0.021197,0.023791,0.026384,0.028978,0.031571,0.034165,0.036758,0.039352,0.041945,0.044539,0.047132,0.049726,0.052319,0.054913,0.057506,0.0601,0.062693,0.065287,0.067881,0.070474,0.073068,0.075661,0.078255,0.080848,0.083442,0.086035,0.088629,0.091222,0.093816,0.096409,0.099003,0.101596,0.10419,0.106783,0.109377,0.11197,0.114564,0.117157,0.119751,0.122344,0.124938]}},"mc_sims":10000},"fourd":{"n_draws":313,"n_numbers":7199,"per_draw":23,"first_date":"2024-11-16","last_date":"2026-11-14","pos_counts":[[751,721,691,719,710,671,754,725,689,768],[727,716,724,730,738,667,722,707,745,723],[689,726,719,764,720,689,694,740,691,767],[685,726,672,712,721,718,743,793,732,697]],"expected":719.9,"patterns":{"labels":["All different","One pair","Two pairs","Triple","Quad"],"observed":[3697.0,3066.0,200.0,224.0,12.0],"expected":[3628.296,3109.968,194.373,259.164,7.199]},"palindromes":{"observed":71,"expected":71.99},"digit_sum":{"observed":[3,2,5,16,24,34,50,94,109,142,225,242,289,346,402,443,422,492,453,451,459,430,375,385,334,240,201,171,128,91,49,40,26,11,11,3,1],"expected":[0.7199,2.8796,7.199,14.398,25.1965,40.3144,60.4716,86.388,118.7835,158.378,203.0118,250.5252,298.7585,345.552,388.746,426.1808,455.6967,475.134,482.333,475.134,455.6967,426.1808,388.746,345.552,298.7585,250.5252,203.0118,158.378,118.7835,86.388,60.4716,40.3144,25.1965,14.398,7.199,2.8796,0.7199]},"repeats":{"distinct_repeated":1628,"top":[{"number":"0313","count":7},{"number":"0237","count":5},{"number":"0640","count":5},{"number":"3052","count":5},{"number":"4379","count":5},{"number":"6399","count":5},{"number":"6437","count":5},{"number":"7273","count":5},{"number":"9746","count":5},{"number":"0194","count":4}]},"bayes":[{"fair":0.1,"threshold":1.1,"alpha":1.0,"n":7199,"per":[{"label":0,"count":751,"mean":0.104314,"lo":0.097363,"hi":0.111473,"p_over":0.0588,"p_under":5.5e-05},{"label":1,"count":721,"mean":0.100153,"lo":0.093329,"hi":0.107186,"p_over":0.003275,"p_under":0.003687},{"label":2,"count":691,"mean":0.095991,"lo":0.089299,"hi":0.102896,"p_over":5.1e-05,"p_under":0.069731},{"label":3,"count":719,"mean":0.099875,"lo":0.09306,"hi":0.1069,"p_over":0.002585,"p_under":0.004663},{"label":4,"count":710,"mean":0.098627,"lo":0.091851,"hi":0.105614,"p_over":0.000829,"p_under":0.012525},{"label":5,"count":671,"mean":0.093217,"lo":0.086614,"hi":0.100034,"p_over":1e-06,"p_under":0.252074},{"label":6,"count":754,"mean":0.10473,"lo":0.097767,"hi":0.111901,"p_over":0.07349,"p_under":3.4e-05},{"label":7,"count":725,"mean":0.100707,"lo":0.093867,"hi":0.107758,"p_over":0.005171,"p_under":0.002266},{"label":8,"count":689,"mean":0.095714,"lo":0.08903,"hi":0.10261,"p_over":3.7e-05,"p_under":0.081186},{"label":9,"count":768,"mean":0.106672,"lo":0.099651,"hi":0.1139,"p_over":0.179565,"p_under":3e-06}],"bayes_factors":[{"alpha":1.0,"log10_bf_fair":10.570509},{"alpha":10.0,"log10_bf_fair":5.814719},{"alpha":100.0,"log10_bf_fair":1.796065},{"alpha":1000.0,"log10_bf_fair":-0.04513}],"p_any_over":0.2993,"n_confident_over":0,"n_confident_under":0,"max_ratio_ci":[1.046159,1.144083]},{"fair":0.1,"threshold":1.1,"alpha":1.0,"n":7199,"per":[{"label":0,"count":727,"mean":0.100985,"lo":0.094136,"hi":0.108044,"p_over":0.006442,"p_under":0.001761},{"label":1,"count":716,"mean":0.099459,"lo":0.092657,"hi":0.106471,"p_over":0.001793,"p_under":0.006564},{"label":2,"count":724,"mean":0.100569,"lo":0.093732,"hi":0.107615,"p_over":0.004623,"p_under":0.002564},{"label":3,"count":730,"mean":0.101401,"lo":0.094539,"hi":0.108473,"p_over":0.008864,"p_under":0.001195},{"label":4,"count":738,"mean":0.102511,"lo":0.095615,"hi":0.109616,"p_over":0.019543,"p_under":0.000399},{"label":5,"count":667,"mean":0.092662,"lo":0.086077,"hi":0.099461,"p_over":1e-06,"p_under":0.306727},{"label":6,"count":722,"mean":0.100291,"lo":0.093463,"hi":0.107329,"p_over":0.003679,"p_under":0.003271},{"label":7,"count":707,"mean":0.098211,"lo":0.091448,"hi":0.105185,"p_over":0.000553,"p_under":0.016978},{"label":8,"count":745,"mean":0.103482,"lo":0.096556,"hi":0.110616,"p_over":0.036357,"p_under":0.000142},{"label":9,"count":723,"mean":0.10043,"lo":0.093598,"hi":0.107472,"p_over":0.004127,"p_under":0.002898}],"bayes_factors":[{"alpha":1.0,"log10_bf_fair":11.947664},{"alpha":10.0,"log10_bf_fair":7.1751},{"alpha":100.0,"log10_bf_fair":3.008737},{"alpha":1000.0,"log10_bf_fair":0.536306}],"p_any_over":0.08595,"n_confident_over":0,"n_confident_under":0,"max_ratio_ci":[1.03464,1.117432]},{"fair":0.1,"threshold":1.1,"alpha":1.0,"n":7199,"per":[{"label":0,"count":689,"mean":0.095714,"lo":0.08903,"hi":0.10261,"p_over":3.7e-05,"p_under":0.081186},{"label":1,"count":726,"mean":0.100846,"lo":0.094001,"hi":0.107901,"p_over":0.005775,"p_under":0.001999},{"label":2,"count":719,"mean":0.099875,"lo":0.09306,"hi":0.1069,"p_over":0.002585,"p_under":0.004663},{"label":3,"count":764,"mean":0.106117,"lo":0.099113,"hi":0.113329,"p_over":0.142514,"p_under":6e-06},{"label":4,"count":720,"mean":0.100014,"lo":0.093195,"hi":0.107043,"p_over":0.002912,"p_under":0.004149},{"label":5,"count":689,"mean":0.095714,"lo":0.08903,"hi":0.10261,"p_over":3.7e-05,"p_under":0.081186},{"label":6,"count":694,"mean":0.096407,"lo":0.089701,"hi":0.103325,"p_over":8.2e-05,"p_under":0.054948},{"label":7,"count":740,"mean":0.102788,"lo":0.095884,"hi":0.109901,"p_over":0.023492,"p_under":0.000299},{"label":8,"count":691,"mean":0.095991,"lo":0.089299,"hi":0.102896,"p_over":5.1e-05,"p_under":0.069731},{"label":9,"count":767,"mean":0.106533,"lo":0.099516,"hi":0.113757,"p_over":0.169784,"p_under":4e-06}],"bayes_factors":[{"alpha":1.0,"log10_bf_fair":10.803219},{"alpha":10.0,"log10_bf_fair":6.044399},{"alpha":100.0,"log10_bf_fair":1.99928},{"alpha":1000.0,"log10_bf_fair":0.049253}],"p_any_over":0.32465,"n_confident_over":0,"n_confident_under":0,"max_ratio_ci":[1.046382,1.147264]},{"fair":0.1,"threshold":1.1,"alpha":1.0,"n":7199,"per":[{"label":0,"count":685,"mean":0.095159,"lo":0.088493,"hi":0.102038,"p_over":1.9e-05,"p_under":0.108304},{"label":1,"count":726,"mean":0.100846,"lo":0.094001,"hi":0.107901,"p_over":0.005775,"p_under":0.001999},{"label":2,"count":672,"mean":0.093356,"lo":0.086748,"hi":0.100177,"p_over":2e-06,"p_under":0.239274},{"label":3,"count":712,"mean":0.098904,"lo":0.092119,"hi":0.1059,"p_over":0.001078,"p_under":0.010155},{"label":4,"count":721,"mean":0.100153,"lo":0.093329,"hi":0.107186,"p_over":0.003275,"p_under":0.003687},{"label":5,"count":718,"mean":0.099736,"lo":0.092926,"hi":0.106757,"p_over":0.002291,"p_under":0.005234},{"label":6,"count":743,"mean":0.103204,"lo":0.096287,"hi":0.11033,"p_over":0.030651,"p_under":0.000192},{"label":7,"count":793,"mean":0.11014,"lo":0.103017,"hi":0.117468,"p_over":0.511261,"p_under":0.0},{"label":8,"count":732,"mean":0.101678,"lo":0.094808,"hi":0.108758,"p_over":0.010891,"p_under":0.000916},{"label":9,"count":697,"mean":0.096823,"lo":0.090104,"hi":0.103754,"p_over":0.00013,"p_under":0.042774}],"bayes_factors":[{"alpha":1.0,"log10_bf_fair":10.174539},{"alpha":10.0,"log10_bf_fair":5.423288},{"alpha":100.0,"log10_bf_fair":1.444889},{"alpha":1000.0,"log10_bf_fair":-0.21821}],"p_any_over":0.5447,"n_confident_over":0,"n_confident_under":0,"max_ratio_ci":[1.052709,1.174292]}],"tests":[{"id":"pos_chi2","name":"Digit frequency, all positions (chi-square)","stat":43.141547,"p_classic":0.192395,"p_mc":0.191981,"question":"Are digits 0-9 equally likely in every position?","p":0.191981,"q_bh":0.36841,"verdict":"Consistent with fair draws"},{"id":"pos1","name":"Digit frequency, position 1","stat":12.155716,"p_classic":0.204672,"p_mc":null,"question":"Are digits equally likely in position 1?","p":0.204672,"q_bh":0.36841,"verdict":"Consistent with fair draws"},{"id":"pos2","name":"Digit frequency, position 2","stat":5.724267,"p_classic":0.767166,"p_mc":null,"question":"Are digits equally likely in position 2?","p":0.767166,"q_bh":0.863062,"verdict":"Consistent with fair draws"},{"id":"pos3","name":"Digit frequency, position 3","stat":11.141686,"p_classic":0.266122,"p_mc":null,"question":"Are digits equally likely in position 3?","p":0.266122,"q_bh":0.399183,"verdict":"Consistent with fair draws"},{"id":"pos4","name":"Digit frequency, position 4","stat":14.119878,"p_classic":0.118124,"p_mc":null,"question":"Are digits equally likely in position 4?","p":0.118124,"q_bh":0.36841,"verdict":"Consistent with fair draws"},{"id":"max_dev","name":"Largest digit deviation","stat":73.1,"p_classic":null,"p_mc":0.154285,"question":"Is any single position/digit cell too far from expected?","p":0.154285,"q_bh":0.36841,"verdict":"Consistent with fair draws"},{"id":"pattern","name":"Digit patterns (pair/triple/quad)","stat":3.250588,"p_classic":0.196854,"p_mc":null,"question":"Do repeated-digit patterns occur at the expected rates?","p":0.196854,"q_bh":0.36841,"verdict":"Consistent with fair draws"},{"id":"repeats","name":"Numbers repeating across draws","stat":2051.0,"p_classic":null,"p_mc":0.576542,"question":"Do winning numbers repeat more/less than chance?","p":0.576542,"q_bh":0.741269,"verdict":"Consistent with fair draws"},{"id":"runs_first","name":"Runs test: 1st prize high/low","stat":-0.026091,"p_classic":0.979185,"p_mc":null,"question":"Do high/low 1st-prize numbers come in streaks?","p":0.979185,"q_bh":0.979185,"verdict":"Consistent with fair draws"}],"null":{"pos_chi2":{"counts":[3,3,15,46,67,115,192,295,423,523,612,748,757,763,742,765,678,623,535,450,375,292,268,195,158,92,67,57,35,39,21,22,5,4,4,4,3,2,1,1],"edges":[11.801083,13.421517,15.04195,16.662384,18.282817,19.90325,21.523684,23.144117,24.764551,26.384984,28.005417,29.625851,31.246284,32.866718,34.487151,36.107584,37.728018,39.348451,40.968885,42.589318,44.209751,45.830185,47.450618,49.071052,50.691485,52.311918,53.932352,55.552785,57.173219,58.793652,60.414085,62.034519,63.654952,65.275385,66.895819,68.516252,70.136686,71.757119,73.377552,74.997986,76.618419]},"max_dev":{"counts":[2,5,22,73,128,185,275,607,513,610,867,934,748,691,808,771,504,531,461,286,227,217,161,83,87,62,38,32,22,29,5,4,7,1,3,0,0,0,0,1],"edges":[30.9,33.18,35.46,37.74,40.02,42.3,44.58,46.86,49.14,51.42,53.7,55.98,58.26,60.54,62.82,65.1,67.38,69.66,71.94,74.22,76.5,78.78,81.06,83.34,85.62,87.9,90.18,92.46,94.74,97.02,99.3,101.58,103.86,106.14,108.42,110.7,112.98,115.26,117.54,119.82,122.1]},"repeats":{"counts":[1,1,4,8,4,23,28,49,66,108,174,205,321,334,418,593,559,798,698,697,848,671,756,572,476,441,322,258,158,137,106,60,50,24,12,9,6,2,1,2],"edges":[1960.0,1965.4,1970.8,1976.2,1981.6,1987.0,1992.4,1997.8,2003.2,2008.6,2014.0,2019.4,2024.8,2030.2,2035.6,2041.0,2046.4,2051.8,2057.2,2062.6,2068.0,2073.4,2078.8,2084.2,2089.6,2095.0,2100.4,2105.8,2111.2,2116.6,2122.0,2127.4,2132.8,2138.2,2143.6,2149.0,2154.4,2159.8,2165.2,2170.6,2176.0]}},"mc_sims":10000,"draws":[{"no":5249,"date":"2024-11-16","first":"8078"},{"no":5250,"date":"2024-11-17","first":"7571"},{"no":5251,"date":"2024-11-20","first":"3256"},{"no":5252,"date":"2024-11-23","first":"4823"},{"no":5253,"date":"2024-11-24","first":"5392"},{"no":5254,"date":"2024-11-27","first":"5217"},{"no":5255,"date":"2024-11-30","first":"4625"},{"no":5256,"date":"2024-12-01","first":"8682"},{"no":5257,"date":"2024-12-04","first":"9053"},{"no":5258,"date":"2024-12-07","first":"5929"},{"no":5259,"date":"2024-12-08","first":"3239"},{"no":5260,"date":"2024-12-11","first":"0841"},{"no":5261,"date":"2024-12-14","first":"2700"},{"no":5262,"date":"2024-12-15","first":"1599"},{"no":5263,"date":"2024-12-18","first":"9581"},{"no":5264,"date":"2024-12-21","first":"3259"},{"no":5265,"date":"2024-12-22","first":"5497"},{"no":5266,"date":"2024-12-25","first":"5374"},{"no":5267,"date":"2024-12-28","first":"0175"},{"no":5268,"date":"2024-12-29","first":"6777"},{"no":5269,"date":"2025-01-01","first":"7293"},{"no":5270,"date":"2025-01-04","first":"2679"},{"no":5271,"date":"2025-01-05","first":"5256"},{"no":5272,"date":"2025-01-08","first":"8975"},{"no":5273,"date":"2025-01-11","first":"5263"},{"no":5274,"date":"2025-01-12","first":"8504"},{"no":5275,"date":"2025-01-15","first":"5832"},{"no":5276,"date":"2025-01-18","first":"9858"},{"no":5277,"date":"2025-01-19","first":"3891"},{"no":5278,"date":"2025-01-22","first":"5416"},{"no":5279,"date":"2025-01-25","first":"1222"},{"no":5280,"date":"2025-01-26","first":"2782"},{"no":5281,"date":"2025-01-29","first":"0733"},{"no":5282,"date":"2025-02-01","first":"8383"},{"no":5283,"date":"2025-02-02","first":"9800"},{"no":5284,"date":"2025-02-05","first":"2079"},{"no":5285,"date":"2025-02-08","first":"9285"},{"no":5286,"date":"2025-02-09","first":"3388"},{"no":5287,"date":"2025-02-12","first":"7164"},{"no":5288,"date":"2025-02-15","first":"9899"},{"no":5289,"date":"2025-02-16","first":"7539"},{"no":5290,"date":"2025-02-19","first":"3419"},{"no":5291,"date":"2025-02-22","first":"7325"},{"no":5292,"date":"2025-02-23","first":"6666"},{"no":5293,"date":"2025-02-26","first":"5404"},{"no":5294,"date":"2025-03-01","first":"5946"},{"no":5295,"date":"2025-03-02","first":"7538"},{"no":5296,"date":"2025-03-05","first":"8680"},{"no":5297,"date":"2025-03-08","first":"0948"},{"no":5298,"date":"2025-03-09","first":"4657"},{"no":5299,"date":"2025-03-12","first":"6376"},{"no":5300,"date":"2025-03-15","first":"5540"},{"no":5301,"date":"2025-03-16","first":"9373"},{"no":5302,"date":"2025-03-19","first":"9325"},{"no":5303,"date":"2025-03-22","first":"4720"},{"no":5304,"date":"2025-03-23","first":"4111"},{"no":5305,"date":"2025-03-26","first":"3468"},{"no":5306,"date":"2025-03-29","first":"8682"},{"no":5307,"date":"2025-03-30","first":"8748"},{"no":5308,"date":"2025-04-02","first":"3567"},{"no":5309,"date":"2025-04-05","first":"1815"},{"no":5310,"date":"2025-04-06","first":"1546"},{"no":5311,"date":"2025-04-09","first":"8057"},{"no":5312,"date":"2025-04-12","first":"1564"},{"no":5313,"date":"2025-04-13","first":"5891"},{"no":5314,"date":"2025-04-16","first":"0193"},{"no":5315,"date":"2025-04-19","first":"8119"},{"no":5316,"date":"2025-04-20","first":"7422"},{"no":5317,"date":"2025-04-23","first":"4045"},{"no":5318,"date":"2025-04-26","first":"0990"},{"no":5319,"date":"2025-04-27","first":"4707"},{"no":5320,"date":"2025-04-30","first":"4655"},{"no":5321,"date":"2025-05-03","first":"6996"},{"no":5322,"date":"2025-05-04","first":"5507"},{"no":5323,"date":"2025-05-07","first":"2092"},{"no":5324,"date":"2025-05-10","first":"0050"},{"no":5325,"date":"2025-05-11","first":"8947"},{"no":5326,"date":"2025-05-14","first":"8283"},{"no":5327,"date":"2025-05-17","first":"6660"},{"no":5328,"date":"2025-05-18","first":"0665"},{"no":5329,"date":"2025-05-21","first":"3576"},{"no":5330,"date":"2025-05-24","first":"1766"},{"no":5331,"date":"2025-05-25","first":"0825"},{"no":5332,"date":"2025-05-28","first":"9617"},{"no":5333,"date":"2025-05-31","first":"9304"},{"no":5334,"date":"2025-06-01","first":"5259"},{"no":5335,"date":"2025-06-04","first":"7634"},{"no":5336,"date":"2025-06-07","first":"4520"},{"no":5337,"date":"2025-06-08","first":"3805"},{"no":5338,"date":"2025-06-11","first":"8184"},{"no":5339,"date":"2025-06-14","first":"8327"},{"no":5340,"date":"2025-06-15","first":"5891"},{"no":5341,"date":"2025-06-18","first":"0536"},{"no":5342,"date":"2025-06-21","first":"4104"},{"no":5343,"date":"2025-06-22","first":"9729"},{"no":5344,"date":"2025-06-25","first":"6238"},{"no":5345,"date":"2025-06-28","first":"4747"},{"no":5346,"date":"2025-06-29","first":"7479"},{"no":5347,"date":"2025-07-02","first":"1924"},{"no":5348,"date":"2025-07-05","first":"0264"},{"no":5349,"date":"2025-07-06","first":"2472"},{"no":5350,"date":"2025-07-09","first":"0175"},{"no":5351,"date":"2025-07-12","first":"3064"},{"no":5352,"date":"2025-07-13","first":"8775"},{"no":5353,"date":"2025-07-16","first":"9362"},{"no":5354,"date":"2025-07-19","first":"4802"},{"no":5355,"date":"2025-07-20","first":"4600"},{"no":5356,"date":"2025-07-23","first":"9559"},{"no":5357,"date":"2025-07-26","first":"0873"},{"no":5358,"date":"2025-07-27","first":"7280"},{"no":5359,"date":"2025-07-30","first":"8115"},{"no":5360,"date":"2025-08-02","first":"0851"},{"no":5361,"date":"2025-08-03","first":"9427"},{"no":5362,"date":"2025-08-06","first":"9132"},{"no":5363,"date":"2025-08-09","first":"8681"},{"no":5364,"date":"2025-08-10","first":"4067"},{"no":5365,"date":"2025-08-13","first":"3380"},{"no":5366,"date":"2025-08-16","first":"4315"},{"no":5367,"date":"2025-08-17","first":"7477"},{"no":5368,"date":"2025-08-20","first":"0707"},{"no":5369,"date":"2025-08-23","first":"2250"},{"no":5370,"date":"2025-08-24","first":"9197"},{"no":5371,"date":"2025-08-27","first":"6768"},{"no":5372,"date":"2025-08-30","first":"9468"},{"no":5373,"date":"2025-08-31","first":"7057"},{"no":5374,"date":"2025-09-03","first":"9999"},{"no":5375,"date":"2025-09-06","first":"3136"},{"no":5376,"date":"2025-09-07","first":"7336"},{"no":5377,"date":"2025-09-10","first":"7611"},{"no":5378,"date":"2025-09-13","first":"9326"},{"no":5379,"date":"2025-09-14","first":"8015"},{"no":5380,"date":"2025-09-17","first":"8704"},{"no":5381,"date":"2025-09-20","first":"4611"},{"no":5382,"date":"2025-09-21","first":"3788"},{"no":5383,"date":"2025-09-24","first":"3091"},{"no":5384,"date":"2025-09-27","first":"4874"},{"no":5385,"date":"2025-09-28","first":"5958"},{"no":5386,"date":"2025-10-01","first":"0526"},{"no":5387,"date":"2025-10-04","first":"5051"},{"no":5388,"date":"2025-10-05","first":"4913"},{"no":5389,"date":"2025-10-08","first":"8079"},{"no":5390,"date":"2025-10-11","first":"3635"},{"no":5391,"date":"2025-10-12","first":"1060"},{"no":5392,"date":"2025-10-15","first":"7324"},{"no":5393,"date":"2025-10-18","first":"6135"},{"no":5394,"date":"2025-10-19","first":"5548"},{"no":5395,"date":"2025-10-22","first":"8612"},{"no":5396,"date":"2025-10-25","first":"8585"},{"no":5397,"date":"2025-10-26","first":"0316"},{"no":5398,"date":"2025-10-29","first":"3378"},{"no":5399,"date":"2025-11-01","first":"4326"},{"no":5400,"date":"2025-11-02","first":"8989"},{"no":5401,"date":"2025-11-05","first":"0180"},{"no":5402,"date":"2025-11-08","first":"6456"},{"no":5403,"date":"2025-11-09","first":"7499"},{"no":5404,"date":"2025-11-12","first":"9223"},{"no":5405,"date":"2025-11-15","first":"8862"},{"no":5406,"date":"2025-11-16","first":"1396"},{"no":5407,"date":"2025-11-19","first":"9551"},{"no":5408,"date":"2025-11-22","first":"8590"},{"no":5409,"date":"2025-11-23","first":"2755"},{"no":5410,"date":"2025-11-26","first":"1434"},{"no":5411,"date":"2025-11-29","first":"7352"},{"no":5412,"date":"2025-11-30","first":"3393"},{"no":5413,"date":"2025-12-03","first":"7331"},{"no":5414,"date":"2025-12-06","first":"1419"},{"no":5415,"date":"2025-12-07","first":"2508"},{"no":5416,"date":"2025-12-10","first":"1912"},{"no":5417,"date":"2025-12-13","first":"8789"},{"no":5418,"date":"2025-12-14","first":"2056"},{"no":5419,"date":"2025-12-17","first":"8391"},{"no":5420,"date":"2025-12-20","first":"3114"},{"no":5421,"date":"2025-12-21","first":"5263"},{"no":5422,"date":"2025-12-24","first":"9395"},{"no":5423,"date":"2025-12-27","first":"7308"},{"no":5424,"date":"2025-12-28","first":"9507"},{"no":5425,"date":"2025-12-31","first":"7136"},{"no":5426,"date":"2026-01-03","first":"3310"},{"no":5427,"date":"2026-01-04","first":"3734"},{"no":5428,"date":"2026-01-07","first":"4807"},{"no":5429,"date":"2026-01-10","first":"2038"},{"no":5430,"date":"2026-01-11","first":"3283"},{"no":5431,"date":"2026-01-14","first":"0305"},{"no":5432,"date":"2026-01-17","first":"3236"},{"no":5433,"date":"2026-01-18","first":"5896"},{"no":5434,"date":"2026-01-21","first":"0452"},{"no":5435,"date":"2026-01-24","first":"7295"},{"no":5436,"date":"2026-01-25","first":"4025"},{"no":5437,"date":"2026-01-28","first":"9683"},{"no":5438,"date":"2026-01-31","first":"2490"},{"no":5439,"date":"2026-02-01","first":"7970"},{"no":5440,"date":"2026-02-04","first":"7541"},{"no":5441,"date":"2026-02-07","first":"1516"},{"no":5442,"date":"2026-02-08","first":"2916"},{"no":5443,"date":"2026-02-11","first":"5878"},{"no":5444,"date":"2026-02-14","first":"9651"},{"no":5445,"date":"2026-02-15","first":"4198"},{"no":5446,"date":"2026-02-18","first":"4118"},{"no":5447,"date":"2026-02-21","first":"5888"},{"no":5448,"date":"2026-02-22","first":"1903"},{"no":5449,"date":"2026-02-25","first":"1516"},{"no":5450,"date":"2026-02-28","first":"4172"},{"no":5451,"date":"2026-03-01","first":"3927"},{"no":5452,"date":"2026-03-04","first":"4299"},{"no":5453,"date":"2026-03-07","first":"4146"},{"no":5454,"date":"2026-03-08","first":"0473"},{"no":5455,"date":"2026-03-11","first":"7905"},{"no":5456,"date":"2026-03-14","first":"5409"},{"no":5457,"date":"2026-03-15","first":"5747"},{"no":5458,"date":"2026-03-18","first":"8312"},{"no":5459,"date":"2026-03-21","first":"0143"},{"no":5460,"date":"2026-03-22","first":"8649"},{"no":5461,"date":"2026-03-25","first":"2729"},{"no":5462,"date":"2026-03-28","first":"8750"},{"no":5463,"date":"2026-03-29","first":"2069"},{"no":5464,"date":"2026-04-01","first":"4450"},{"no":5465,"date":"2026-04-04","first":"7752"},{"no":5466,"date":"2026-04-05","first":"8866"},{"no":5467,"date":"2026-04-08","first":"7195"},{"no":5468,"date":"2026-04-11","first":"8025"},{"no":5469,"date":"2026-04-12","first":"2218"},{"no":5470,"date":"2026-04-15","first":"3873"},{"no":5471,"date":"2026-04-18","first":"8953"},{"no":5472,"date":"2026-04-19","first":"9815"},{"no":5473,"date":"2026-04-22","first":"2791"},{"no":5474,"date":"2026-04-25","first":"9950"},{"no":5475,"date":"2026-04-26","first":"7937"},{"no":5476,"date":"2026-04-29","first":"1167"},{"no":5477,"date":"2026-05-02","first":"2300"},{"no":5478,"date":"2026-05-03","first":"6303"},{"no":5479,"date":"2026-05-06","first":"3361"},{"no":5480,"date":"2026-05-09","first":"5479"},{"no":5481,"date":"2026-05-10","first":"7517"},{"no":5482,"date":"2026-05-13","first":"0672"},{"no":5483,"date":"2026-05-16","first":"2735"},{"no":5484,"date":"2026-05-17","first":"0368"},{"no":5485,"date":"2026-05-20","first":"7699"},{"no":5486,"date":"2026-05-23","first":"2176"},{"no":5487,"date":"2026-05-24","first":"7758"},{"no":5488,"date":"2026-05-27","first":"1516"},{"no":5489,"date":"2026-05-30","first":"9806"},{"no":5490,"date":"2026-05-31","first":"1869"},{"no":5491,"date":"2026-06-03","first":"2414"},{"no":5492,"date":"2026-06-06","first":"5974"},{"no":5493,"date":"2026-06-07","first":"0735"},{"no":5494,"date":"2026-06-10","first":"1622"},{"no":5495,"date":"2026-06-13","first":"5478"},{"no":5496,"date":"2026-06-14","first":"4048"},{"no":5497,"date":"2026-06-17","first":"4505"},{"no":5498,"date":"2026-06-20","first":"9954"},{"no":5499,"date":"2026-06-21","first":"0257"},{"no":5500,"date":"2026-06-24","first":"5950"},{"no":5501,"date":"2026-06-27","first":"5286"},{"no":5502,"date":"2026-06-28","first":"1563"},{"no":5503,"date":"2026-07-01","first":"6428"},{"no":5504,"date":"2026-07-04","first":"4230"},{"no":5505,"date":"2026-07-05","first":"0629"},{"no":5506,"date":"2026-07-08","first":"5701"},{"no":5507,"date":"2026-07-11","first":"6452"},{"no":5508,"date":"2026-07-12","first":"2329"},{"no":5509,"date":"2026-07-15","first":"4087"},{"no":5510,"date":"2026-07-18","first":"9418"},{"no":5511,"date":"2026-07-19","first":"0647"},{"no":5512,"date":"2026-07-22","first":"9662"},{"no":5513,"date":"2026-07-25","first":"5131"},{"no":5514,"date":"2026-07-26","first":"6431"},{"no":5515,"date":"2026-07-29","first":"8813"},{"no":5516,"date":"2026-08-01","first":"5964"},{"no":5517,"date":"2026-08-02","first":"3052"},{"no":5518,"date":"2026-08-05","first":"0715"},{"no":5519,"date":"2026-08-08","first":"5102"},{"no":5520,"date":"2026-08-09","first":"7137"},{"no":5521,"date":"2026-08-12","first":"2375"},{"no":5522,"date":"2026-08-15","first":"6714"},{"no":5523,"date":"2026-08-16","first":"6149"},{"no":5524,"date":"2026-08-19","first":"4478"},{"no":5525,"date":"2026-08-22","first":"3001"},{"no":5526,"date":"2026-08-23","first":"9675"},{"no":5527,"date":"2026-08-26","first":"1564"},{"no":5528,"date":"2026-08-29","first":"0363"},{"no":5529,"date":"2026-08-30","first":"9238"},{"no":5530,"date":"2026-09-02","first":"4125"},{"no":5531,"date":"2026-09-05","first":"9248"},{"no":5532,"date":"2026-09-06","first":"8579"},{"no":5533,"date":"2026-09-09","first":"1853"},{"no":5534,"date":"2026-09-12","first":"2710"},{"no":5535,"date":"2026-09-13","first":"9400"},{"no":5536,"date":"2026-09-16","first":"9224"},{"no":5537,"date":"2026-09-19","first":"0921"},{"no":5538,"date":"2026-09-20","first":"9622"},{"no":5539,"date":"2026-09-23","first":"5272"},{"no":5540,"date":"2026-09-26","first":"6999"},{"no":5541,"date":"2026-09-27","first":"8791"},{"no":5542,"date":"2026-09-30","first":"3096"},{"no":5543,"date":"2026-10-03","first":"3670"},{"no":5544,"date":"2026-10-04","first":"2812"},{"no":5545,"date":"2026-10-07","first":"9838"},{"no":5546,"date":"2026-10-10","first":"2075"},{"no":5547,"date":"2026-10-11","first":"2588"},{"no":5548,"date":"2026-10-14","first":"0300"},{"no":5549,"date":"2026-10-17","first":"4094"},{"no":5550,"date":"2026-10-18","first":"1927"},{"no":5551,"date":"2026-10-21","first":"8455"},{"no":5552,"date":"2026-10-24","first":"3837"},{"no":5553,"date":"2026-10-25","first":"1221"},{"no":5554,"date":"2026-10-28","first":"5150"},{"no":5555,"date":"2026-10-31","first":"4726"},{"no":5556,"date":"2026-11-01","first":"9743"},{"no":5557,"date":"2026-11-04","first":"6957"},{"no":5558,"date":"2026-11-07","first":"6208"},{"no":5559,"date":"2026-11-08","first":"0824"},{"no":5560,"date":"2026-11-11","first":"7701"},{"no":5561,"date":"2026-11-14","first":"6578"}]},"mc_sims":10000,"picks":{"toto":{"next":{"date":"2026-11-16","sets":[{"lens":"Anti-popular","numbers":[12,35,37,39,40,42],"rationale":"Numbers other players tend to avoid (from Singapore Pools winning-share data + birthday/lucky-number prior). Same odds, but fewer people to share a win with."},{"lens":"Typical profile","numbers":[10,23,28,29,31,47],"rationale":"Sum 168 (middle 50% is 127\u2013172), 4 odd, spread across decades. Common shapes are common only because most combinations look like this."},{"lens":"Bayesian posterior","numbers":[6,8,15,21,26,34],"rationale":"Drawn from the posterior over number probabilities given past draws. The posterior is almost uniform, so this is close to random."}]},"last":null,"history":[],"record":{"since":null,"sets":0,"prizes":0,"expected":0.0}},"fourd":{"next":{"date":"2026-11-15","sets":[{"lens":"Most common pattern","numbers":"2859","rationale":"All four digits different, the most common pattern (50.4% of numbers). Every number still has the same odds."},{"lens":"Bayesian digit posterior","numbers":"6334","rationale":"Each digit drawn from its position's posterior given past results. Posteriors are almost uniform."},{"lens":"Pure random","numbers":"0351","rationale":"Uniform 0000\u20139999. 4D pays fixed prizes, so no number is worth more than another."}]},"last":null,"history":[],"record":{"since":null,"sets":0,"prizes":0,"expected":0.0}},"popularity":{"coef":[0.013779,0.017961,0.01866,0.016042,0.05908,-0.010733,0.055837,0.056348,0.0674,0.037744,0.044992,0.031898,-0.015174,0.025834,0.003534,0.016078,-0.000925,0.063367,0.011267,0.028716,-0.006575,-0.003719,0.03492,-0.000497,-0.015964,0.010511,-0.025524,0.060106,-0.003044,-0.015064,-0.033768,-0.033311,-0.014766,-0.02968,-0.013851,-0.025801,-0.053687,-0.037669,-0.040686,-0.060212,-0.024838,-0.020899,-0.033383,-0.050864,0.021576,-0.028672,-0.035017,-0.050089,-0.011241],"data_coef":[0.009932,0.015906,0.012619,0.013164,0.074648,-0.029371,0.061444,0.057888,0.080106,0.044167,0.054522,0.035817,-0.018572,0.035725,0.003867,0.021788,-0.002502,0.076486,0.014915,0.039842,-0.010574,-0.006494,0.048706,-0.00189,-0.023986,0.013835,-0.037643,0.071827,-0.005529,-0.0227,-0.049421,-0.03591,-0.009418,-0.030724,-0.00811,-0.025182,-0.06502,-0.050708,-0.046446,-0.074341,-0.023806,-0.018179,-0.036013,-0.060986,0.042499,-0.029283,-0.038348,-0.064165,-0.004382],"source":"data+prior","cv_gain":0.110867,"lambda":10,"n":208},"toto_odds":13983816,"p_toto_any":0.018638,"p_4d_any":0.0023,"toto_match_pmf":[0.435965,0.413019,0.132378,0.01765,0.000969,1.8e-05,0.0],"fourd_best_pmf":[6.2e-05,0.290628,0.627585,0.079427,0.002297],"fourd_big":{"first":2000,"second":1000,"third":490,"starter":250,"consolation":60}}};
+</script>
+<script>/* Page logic: builds every chart spec from DATA and wires up controls. */
+(function () {
+  "use strict";
+  const W = window.WGLCharts;
+  const $ = (id) => document.getElementById(id);
+  const T = DATA.toto, F = DATA.fourd;
+  const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+  const fmtP = (p) => (p == null || isNaN(p) ? "–" : p < 0.001 ? "<0.001" : p.toFixed(3));
+  const money = (v) => (v == null ? "–" : "$" + fmt(v));
+  const intTicks = (lo, hi, step) => { const o = []; for (let v = lo; v <= hi; v += step) o.push({ v, label: String(v) }); return o; };
+  const BAR_R = 4;
+
+  $("meta").textContent =
+    `TOTO ${T.first_date} → ${T.last_date} · 4D ${F.first_date} → ${F.last_date} · ${fmt(DATA.mc_sims)} Monte Carlo simulations`;
+
+  // ---------------- theme + tabs
+  $("theme").addEventListener("click", () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    W.renderAll();
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => W.renderAll());
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $("tab-toto").hidden = b.dataset.tab !== "toto";
+    $("tab-fourd").hidden = b.dataset.tab !== "fourd";
+    W.renderAll();
+  }));
+  if (!W.supported()) $("nogl").hidden = false;
+  if (location.hash === "#4d") document.querySelector('.tab[data-tab="fourd"]').click();
+
+  // ---------------- shared builders
+  function histSpec(hist, observed, title) {
+    const { counts, edges } = hist;
+    const max = Math.max(...counts);
+    const xs = [Math.min(edges[0], observed), Math.max(edges[edges.length - 1], observed)];
+    const span = xs[1] - xs[0] || 1;
+    xs[0] -= span * 0.03; xs[1] += span * 0.03;
+    const dec = span < 2 ? 3 : span < 20 ? 1 : 0;
+    return {
+      x: xs, y: [0, max * 1.1], height: 220,
+      xTicks: W.niceTicks(xs[0], xs[1], 5, (v) => fmt(v, dec)), yTicks: W.niceTicks(0, max * 1.1, 4),
+      xTitle: title, yTitle: "simulations",
+      marks: [
+        { type: "rect", round: 2, items: counts.map((c, i) => ({
+          x0: edges[i], x1: edges[i + 1] - (edges[1] - edges[0]) * 0.12, y0: 0, y1: c, color: "var(--band)", alpha: 0.55,
+          tip: `<b>${fmt(edges[i], dec)} – ${fmt(edges[i + 1], dec)}</b><br>${fmt(c)} of ${fmt(DATA.mc_sims)} fair simulations`,
+        })) },
+        { type: "vline", x: observed, color: "var(--series-2)", width: 2 },
+      ],
+      legend: [{ label: "fair simulations", color: "var(--band)", kind: "swatch" }, { label: `observed = ${fmt(observed, dec)}`, color: "var(--series-2)", kind: "line" }],
+    };
+  }
+
+  function testsTable(el, tests, nullHists, onSelect) {
+    const rows = tests.map((t) => {
+      const ok = t.q_bh >= 0.05;
+      const has = !!nullHists[t.id];
+      return `<tr data-id="${t.id}" class="${has ? "clickable" : ""}" title="${t.question}">
+        <td>${t.name}<div class="muted">${t.question}</div></td>
+        <td class="num">${fmt(t.stat, Math.abs(t.stat) < 10 ? 3 : 1)}</td>
+        <td class="num">${fmtP(t.p)}${t.p_mc != null ? "" : "<span class='muted'>*</span>"}</td>
+        <td class="num">${fmtP(t.q_bh)}</td>
+        <td><span class="verdict ${ok ? "ok" : "flag"}">${ok ? "✓ Fair" : "⚠ Unusual"}</span></td></tr>`;
+    }).join("");
+    el.innerHTML = `<thead><tr><th>Test</th><th class="num">Statistic</th><th class="num">p</th><th class="num">q (BH)</th><th>Verdict</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="5" class="muted">* classical (analytic) p-value; others are empirical from ${fmt(DATA.mc_sims)} simulations.</td></tr></tfoot>`;
+    el.querySelectorAll("tr.clickable").forEach((tr) => tr.addEventListener("click", () => {
+      el.querySelectorAll("tr").forEach((x) => x.classList.toggle("sel", x === tr));
+      onSelect(tests.find((t) => t.id === tr.dataset.id));
+    }));
+    const first = el.querySelector("tr.clickable");
+    if (first) first.classList.add("sel");
+    return tests.find((t) => nullHists[t.id]);
+  }
+
+  function observedVsExpected(labels, observed, expected, opts = {}) {
+    const max = Math.max(...observed, ...expected) * 1.12;
+    const n = labels.length;
+    return {
+      x: [-0.6, n - 0.4], y: [0, max], height: opts.height || 240, pad: { b: opts.padB || 30 },
+      xTicks: labels.map((l, i) => ({ v: i, label: String(l) })), yTicks: W.niceTicks(0, max, 4),
+      xTitle: opts.xTitle, yTitle: opts.yTitle || "count",
+      marks: [
+        { type: "rect", round: BAR_R, items: observed.map((o, i) => ({
+          x0: i - 0.32, x1: i + 0.32, y0: 0, y1: o, color: "var(--series-1)",
+          tip: `<b>${labels[i]}</b><br>Observed: ${fmt(o)}<br>Expected: ${fmt(expected[i], 1)}<br>Ratio: ${expected[i] ? fmt(o / expected[i], 2) : "–"}×`,
+        })) },
+        { type: "rect", round: 0, items: expected.map((e, i) => ({ x0: i - 0.42, x1: i + 0.42, y0: e - max * 0.004, y1: e + max * 0.004, color: "var(--text-1)" })) },
+      ],
+      legend: [{ label: "observed", color: "var(--series-1)" }, { label: "expected if fair", color: "var(--text-1)", kind: "line" }],
+    };
+  }
+
+  function lineOverBars(labelsX, observed, expected, opts) {
+    const max = Math.max(...observed, ...expected) * 1.12;
+    const step = opts.tickStep || 1;
+    return {
+      x: [opts.x0 - 0.6, opts.x0 + observed.length - 0.4], y: [0, max], height: opts.height || 240,
+      xTicks: labelsX.map((l, i) => ({ v: opts.x0 + i, label: l })).filter((_, i) => i % step === 0),
+      yTicks: W.niceTicks(0, max, 4), xTitle: opts.xTitle, yTitle: opts.yTitle || "count",
+      marks: [
+        { type: "rect", round: 2, hitBand: true, items: observed.map((o, i) => ({
+          x0: opts.x0 + i - 0.38, x1: opts.x0 + i + 0.38, y0: 0, y1: o, color: "var(--series-1)",
+          tip: `<b>${opts.tipLabel(i)}</b><br>Observed: ${fmt(o)}<br>Expected: ${fmt(expected[i], 1)}`,
+        })) },
+        { type: "line", points: expected.map((e, i) => [opts.x0 + i, e]), color: "var(--series-2)", width: 2 },
+      ],
+      legend: [{ label: "observed", color: "var(--series-1)" }, { label: opts.expLabel || "expected if fair", color: "var(--series-2)", kind: "line" }],
+    };
+  }
+
+  // ================================================================ TOTO
+  const passT = T.tests.filter((t) => t.q_bh >= 0.05).length;
+  $("t-kpi-draws").textContent = fmt(T.n_draws);
+  $("t-kpi-tests").textContent = `${passT} / ${T.tests.length}`;
+  const bf1 = T.bayes.bayes_factors[0].log10_bf_fair;
+  $("t-kpi-bf").textContent = bf1 > 6 ? `10^${fmt(bf1, 0)} : 1` : `${fmt(Math.pow(10, bf1), bf1 > 2 ? 0 : 1)} : 1`;
+  $("t-kpi-pany").textContent = `${T.bayes.n_confident_over + T.bayes.n_confident_under} / 49`;
+  $("t-kpi-pany-l").textContent = `numbers confidently biased (≥95% posterior of being ≥10% over/under fair). Fair machines show ~${fmt(T.bayes.confident_null_mean, 1)} by chance.`;
+  $("t-bf-note").innerHTML = "Bayes factor (fair : biased) by prior concentration α — smaller α = prior expects stronger bias: " +
+    T.bayes.bayes_factors.map((b) => `α=${b.alpha}: 10<sup>${fmt(b.log10_bf_fair, 1)}</sup>`).join(" · ") +
+    `. Above 1 favours a fair machine. Treats each ball as an independent categorical draw (standard approximation; real draws are without replacement within a draw).`;
+
+  // frequency window select
+  const sel = $("t-window");
+  sel.innerHTML = T.windows.map((w) => `<option value="${w}">${T.freq[w].label} (${T.freq[w].draws} draws)</option>`).join("");
+  sel.value = T.windows[T.windows.length - 1];
+  const freqChart = W.chart($("c-freq"), () => {
+    const f = T.freq[sel.value];
+    const max = Math.max(...f.observed, f.fw_hi) * 1.1;
+    return {
+      x: [0.4, 49.6], y: [0, max], height: 300, aria: "Bar chart of draw frequency per TOTO number",
+      xTicks: intTicks(1, 49, 1).filter((t) => t.v === 1 || t.v % 4 === 0 || t.v === 49), yTicks: W.niceTicks(0, max, 5),
+      xTitle: "number", yTitle: "times drawn",
+      marks: [
+        { type: "hband", y0: f.band_lo, y1: f.band_hi, color: "var(--band)", alpha: 0.13 },
+        { type: "hline", y: f.fw_hi, color: "var(--text-3)", dash: true },
+        { type: "hline", y: f.fw_lo, color: "var(--text-3)", dash: true },
+        { type: "hline", y: f.expected, color: "var(--text-2)", width: 1 },
+        { type: "rect", round: BAR_R, hitBand: true, items: f.observed.map((c, i) => ({
+          x0: i + 1 - 0.36, x1: i + 1 + 0.36, y0: 0, y1: c,
+          color: c > f.band_hi || c < f.band_lo ? "var(--series-2)" : "var(--series-1)",
+          tip: `<b>Number ${i + 1}</b><br>Drawn ${c}× (expected ${fmt(f.expected, 1)})<br>As additional: ${f.additional[i]}×<br>` +
+            `Fair 90% range: ${fmt(f.band_lo)}–${fmt(f.band_hi)}`,
+        })) },
+      ],
+      legend: [
+        { label: "inside 90% fair band", color: "var(--series-1)" }, { label: "outside (≈5 of 49 expected by chance)", color: "var(--series-2)" },
+        { label: "90% fair band", color: "var(--band)", kind: "band" }, { label: "hottest/coldest range", color: "var(--text-3)", kind: "dash" },
+      ],
+    };
+  });
+  sel.addEventListener("change", () => freqChart.render());
+
+  // bayes
+  W.chart($("c-bayes"), () => {
+    const b = T.bayes;
+    const lo = Math.min(...b.per.map((p) => p.lo)) * 0.95, hi = Math.max(...b.per.map((p) => p.hi)) * 1.03;
+    return {
+      x: [0.4, 49.6], y: [lo, hi], height: 260, aria: "Posterior credible intervals per number",
+      xTicks: intTicks(1, 49, 1).filter((t) => t.v === 1 || t.v % 4 === 0 || t.v === 49),
+      yTicks: W.niceTicks(lo, hi, 5, (v) => fmt(v * 100, 2) + "%"), xTitle: "number", yTitle: "P(ball = number)",
+      marks: [
+        { type: "rect", round: 3, hitBand: true, items: b.per.map((p) => ({
+          x0: p.label - 0.22, x1: p.label + 0.22, y0: p.lo, y1: p.hi, color: "var(--series-1)", alpha: 0.4,
+          tip: `<b>Number ${p.label}</b><br>Posterior mean ${fmt(p.mean * 100, 3)}% (fair ${fmt(b.fair * 100, 3)}%)<br>` +
+            `95% CI ${fmt(p.lo * 100, 2)}–${fmt(p.hi * 100, 2)}%<br>P(≥10% over fair) = ${fmt(p.p_over * 100, 1)}%<br>P(≥10% under) = ${fmt(p.p_under * 100, 1)}%`,
+        })) },
+        { type: "rect", round: 0, items: b.per.map((p) => ({ x0: p.label - 0.3, x1: p.label + 0.3, y0: p.mean - (hi - lo) * 0.004, y1: p.mean + (hi - lo) * 0.004, color: "var(--series-1)" })) },
+        { type: "hline", y: b.fair, color: "var(--series-2)", dash: true, width: 1.5 },
+      ],
+      legend: [{ label: "95% credible interval", color: "var(--series-1)", kind: "band" }, { label: "posterior mean", color: "var(--series-1)", kind: "line" }, { label: "fair = 1/49", color: "var(--series-2)", kind: "dash" }],
+    };
+  });
+
+  // tests + null
+  let tSel;
+  const tNull = W.chart($("c-null"), () => { $("t-null-title").textContent = tSel.name; return histSpec(T.null[tSel.id], tSel.stat, "statistic"); });
+  tSel = testsTable($("t-tests"), T.tests, T.null, (t) => { tSel = t; tNull.render(); });
+
+  // sums
+  $("t-sum-note").textContent = `Observed mean ${fmt(T.sums.mean, 1)} vs fair ${fmt(T.sums.fair_mean, 1)}. Line = exact fair distribution (from simulations).`;
+  W.chart($("c-sum"), () => {
+    const e = T.sums.observed.edges, c = T.sums.observed.counts;
+    return lineOverBars(c.map((_, i) => String(e[i])), c, T.sums.fair, {
+      x0: 0, tickStep: 3, xTitle: "sum", yTitle: "draws", tipLabel: (i) => `Sum ${e[i]}–${e[i + 1] - 1}` });
+  });
+
+  // balance
+  const balSel = $("t-balance");
+  const balChart = W.chart($("c-balance"), () => {
+    const b = T[balSel.value];
+    return observedVsExpected([0, 1, 2, 3, 4, 5, 6], b.observed, b.expected, { xTitle: b.label, yTitle: "draws" });
+  });
+  balSel.addEventListener("change", () => balChart.render());
+
+  // pairs heatmap
+  W.chart($("c-pairs"), () => {
+    const size = Math.min($("c-pairs").clientWidth, 620);
+    const items = [];
+    T.pairs.z.forEach((row, i) => row.forEach((z, j) => {
+      if (i === j) return;
+      items.push({ x0: j + 0.5, x1: j + 1.5, y0: i + 0.5, y1: i + 1.5, color: W.diverging(z / 3.5),
+        tip: `<b>${i + 1} & ${j + 1}</b><br>Together ${fmt(z * Math.sqrt(T.pairs.expected) + T.pairs.expected, 0)}× (expected ${fmt(T.pairs.expected, 1)})<br>z = ${fmt(z, 2)}` });
+    }));
+    const ticks = intTicks(1, 49, 1).filter((t) => t.v === 1 || t.v % 6 === 0);
+    return {
+      x: [0.5, 49.5], y: [49.5, 0.5], height: size - 20, pad: { l: 30, r: Math.max(14, $("c-pairs").clientWidth - size + 14), t: 4, b: 24 },
+      xTicks: ticks, yLeftLabels: ticks, marks: [{ type: "rect", round: 0, items }],
+      legend: [{ label: "fewer than expected", color: "var(--div-neg)" }, { label: "as expected", color: "var(--div-mid)" }, { label: "more than expected", color: "var(--div-pos)" }],
+      aria: "Heatmap of pair co-occurrence z-scores",
+    };
+  });
+  $("t-pairs-note").textContent = `Expected per pair: ${fmt(T.pairs.expected, 1)} times. See the “Most frequent pair” test for whether the top pair is surprising.`;
+  $("t-pairs").innerHTML = `<thead><tr><th>Pair</th><th class="num">Times together</th></tr></thead><tbody>` +
+    T.pairs.top.map((p) => `<tr><td><span class="balls"><span class="ball">${p.a}</span><span class="ball">${p.b}</span></span></td><td class="num">${p.count}</td></tr>`).join("") + "</tbody>";
+
+  // gaps
+  W.chart($("c-gaps"), () => lineOverBars(T.gaps.labels, T.gaps.observed, T.gaps.expected, {
+    x0: 1, tickStep: 2, xTitle: "draws until it appears again", yTitle: "gaps", expLabel: "geometric (memoryless)", tipLabel: (i) => `Gap ${T.gaps.labels[i]}` }));
+
+  // prize line
+  W.chart($("c-prize"), () => {
+    const d = T.draws.filter((x) => x.g1 != null);
+    const max = Math.max(...d.map((x) => x.g1)) * 1.08;
+    const months = [];
+    d.forEach((x, i) => { const m = x.date.slice(0, 7); if (!months.length || months[months.length - 1].m !== m) months.push({ m, i }); });
+    return {
+      x: [0, d.length - 1], y: [0, max], height: 240, aria: "Line chart of Group 1 prize per draw",
+      xTicks: months.filter((_, k) => k % 3 === 0).map((m) => ({ v: m.i, label: new Date(m.m + "-01").toLocaleDateString(undefined, { month: "short", year: "2-digit" }) })),
+      yTicks: W.niceTicks(0, max, 4, (v) => "$" + fmt(v / 1e6, 0) + "M"), yTitle: "Group 1 prize",
+      marks: [{ type: "line", points: d.map((x, i) => [i, x.g1]), color: "var(--series-1)", width: 2,
+        tips: d.map((x) => `<b>${x.date}</b> · Draw ${x.no}<br>Group 1 prize: ${money(x.g1)}`) }],
+    };
+  });
+
+  // recent
+  $("t-recent").innerHTML = `<thead><tr><th>Draw</th><th>Date</th><th>Winning numbers</th><th>Additional</th><th class="num">Group 1 prize</th></tr></thead><tbody>` +
+    T.draws.slice(-15).reverse().map((d) => `<tr><td>${d.no}</td><td>${d.date}</td><td><span class="balls">${d.nums.map((n) => `<span class="ball">${n}</span>`).join("")}</span></td>
+      <td><span class="ball add">${d.add}</span></td><td class="num">${money(d.g1)}</td></tr>`).join("") + "</tbody>";
+
+  // ================================================================ 4D
+  const passF = F.tests.filter((t) => t.q_bh >= 0.05).length;
+  $("f-kpi-draws").textContent = fmt(F.n_draws);
+  $("f-kpi-nums").textContent = fmt(F.n_numbers);
+  $("f-kpi-tests").textContent = `${passF} / ${F.tests.length}`;
+  const minBf = Math.min(...F.bayes.map((b) => b.bayes_factors[0].log10_bf_fair));
+  $("f-kpi-bf").textContent = minBf > 6 ? `10^${fmt(minBf, 0)} : 1` : `${fmt(Math.pow(10, minBf), minBf > 2 ? 0 : 1)} : 1`;
+
+  W.chart($("c-heat"), () => {
+    const items = [];
+    F.pos_counts.forEach((row, p) => row.forEach((c, d) => {
+      const z = (c - F.expected) / Math.sqrt(F.expected * 0.9);
+      items.push({ x0: d - 0.48, x1: d + 0.48, y0: p - 0.46, y1: p + 0.46, color: W.diverging(z / 3), round: 3,
+        tip: `<b>Position ${p + 1}, digit ${d}</b><br>${fmt(c)} times (expected ${fmt(F.expected, 1)})<br>z = ${fmt(z, 2)}` });
+    }));
+    return {
+      x: [-0.5, 9.5], y: [3.5, -0.5], height: 220, pad: { l: 52 },
+      xTicks: intTicks(0, 9, 1), yLeftLabels: [0, 1, 2, 3].map((p) => ({ v: p, label: `Pos ${p + 1}` })), xTitle: "digit",
+      marks: [{ type: "rect", items }],
+      legend: [{ label: "fewer", color: "var(--div-neg)" }, { label: "as expected", color: "var(--div-mid)" }, { label: "more", color: "var(--div-pos)" }],
+    };
+  });
+
+  W.chart($("c-fbayes"), () => {
+    const all = F.bayes.flatMap((b) => b.per);
+    const lo = Math.min(...all.map((p) => p.lo)) * 0.97, hi = Math.max(...all.map((p) => p.hi)) * 1.02;
+    const items = [], means = [];
+    F.bayes.forEach((b, p) => b.per.forEach((d) => {
+      const x = p * 11 + d.label;
+      items.push({ x0: x - 0.3, x1: x + 0.3, y0: d.lo, y1: d.hi, color: "var(--series-1)", alpha: 0.4,
+        tip: `<b>Position ${p + 1}, digit ${d.label}</b><br>Posterior mean ${fmt(d.mean * 100, 2)}%<br>95% CI ${fmt(d.lo * 100, 2)}–${fmt(d.hi * 100, 2)}%<br>P(≥10% over fair) = ${fmt(d.p_over * 100, 1)}%` });
+      means.push({ x0: x - 0.38, x1: x + 0.38, y0: d.mean - (hi - lo) * 0.005, y1: d.mean + (hi - lo) * 0.005, color: "var(--series-1)" });
+    }));
+    return {
+      x: [-0.8, 42.8], y: [lo, hi], height: 240,
+      xTicks: [0, 1, 2, 3].map((p) => ({ v: p * 11 + 4.5, label: `Position ${p + 1} (0–9)` })),
+      yTicks: W.niceTicks(lo, hi, 4, (v) => fmt(v * 100, 1) + "%"),
+      marks: [{ type: "rect", round: 3, hitBand: true, items }, { type: "rect", items: means }, { type: "hline", y: 0.1, color: "var(--series-2)", dash: true }],
+      legend: [{ label: "95% credible interval", color: "var(--series-1)", kind: "band" }, { label: "fair = 10%", color: "var(--series-2)", kind: "dash" }],
+    };
+  });
+
+  let fSel;
+  const fNull = W.chart($("c-fnull"), () => { $("f-null-title").textContent = fSel.name; return histSpec(F.null[fSel.id], fSel.stat, "statistic"); });
+  fSel = testsTable($("f-tests"), F.tests, F.null, (t) => { fSel = t; fNull.render(); });
+
+  $("f-pal-note").textContent = `Share of numbers by repeated-digit pattern vs exact fair rates. Palindromes (e.g. 1221): ${F.palindromes.observed} observed vs ${fmt(F.palindromes.expected, 1)} expected.`;
+  W.chart($("c-patterns"), () => observedVsExpected(F.patterns.labels, F.patterns.observed, F.patterns.expected, { xTitle: "pattern", yTitle: "numbers" }));
+
+  W.chart($("c-dsum"), () => lineOverBars(F.digit_sum.observed.map((_, i) => String(i)), F.digit_sum.observed, F.digit_sum.expected, {
+    x0: 0, tickStep: 4, xTitle: "digit sum", yTitle: "numbers", tipLabel: (i) => `Digit sum ${i}` }));
+
+  $("f-rep-note").textContent = `${fmt(F.repeats.distinct_repeated)} distinct numbers won more than once across ${fmt(F.n_draws)} draws. With 23 winners a draw out of 10,000, repeats are expected.`;
+  $("f-repeats").innerHTML = `<thead><tr><th>Number</th><th class="num">Times won (any prize)</th></tr></thead><tbody>` +
+    F.repeats.top.map((r) => `<tr><td>${r.number}</td><td class="num">${r.count}</td></tr>`).join("") + "</tbody>";
+  $("f-recent").innerHTML = `<thead><tr><th>Draw</th><th>Date</th><th>1st prize</th></tr></thead><tbody>` +
+    F.draws.slice(-12).reverse().map((d) => `<tr><td>${d.no}</td><td>${d.date}</td><td>${d.first || "–"}</td></tr>`).join("") + "</tbody>";
+
+  // ================================================================ PICKS (top of each tab)
+  const PK = DATA.picks;
+  const longDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const totoBalls = (nums, big, win, add) => `<span class="balls">${nums.map((n) => {
+    const cls = win ? (win.includes(n) ? " hit" : n === add ? " hit-add" : "") : "";
+    return `<span class="ball${big ? " big" : ""}${cls}">${n}</span>`;
+  }).join("")}</span>`;
+  const recordLine = (r, game) => r.sets
+    ? `<p class="muted">Track record since ${r.since}: ${r.prizes} prize${r.prizes === 1 ? "" : "s"} from ${r.sets} ${game === "toto" ? "sets" : "numbers"}. Random tickets would expect ${fmt(r.expected, 2)}.</p>`
+    : `<p class="muted">Track record starts once the first picked draw has a result.</p>`;
+
+  function renderPicks(game, P, prefix) {
+    const isToto = game === "toto";
+    if (!P.next) {
+      $(prefix + "p-sets").innerHTML = `<p class="muted">No picks yet. Run <code>python make_picks.py --show</code>.</p>`;
+    } else {
+      $(prefix + "p-title").textContent = `Picks for next draw · ${longDate(P.next.date)}`;
+      $(prefix + "p-sets").innerHTML = P.next.sets.map((s, i) => `<div class="pick"><div class="no">${i + 1}</div>
+        <div><span class="lens">${s.lens}</span>${isToto ? totoBalls(s.numbers, true) : `<span class="digits">${s.numbers}</span>`}</div>
+        <div class="why">${s.rationale}</div></div>`).join("");
+    }
+    $(prefix + "p-odds").innerHTML = isToto
+      ? `Odds per set: jackpot <b>1 in ${fmt(PK.toto_odds)}</b> · any prize 1 in ${fmt(1 / PK.p_toto_any)}. Identical for every set; past draws don't change them.`
+      : `Odds per number (Big bet): any prize <b>1 in ${fmt(1 / PK.p_4d_any)}</b> · 1st prize 1 in 10,000. Identical for every number.`;
+
+    const L = P.last;
+    let body;
+    if (!L) body = `<p>No picked draw has a result yet. After ${P.next ? longDate(P.next.date) : "the next draw"} you'll see how the picks did here.</p>`;
+    else if (!L.draw) body = `<p>${longDate(L.date)}: no draw took place.</p>`;
+    else if (isToto) {
+      body = `<p><b>${longDate(L.date)}</b> result:</p>${totoBalls(L.draw.nums, false)} <span class="ball add">${L.draw.add}</span>` +
+        L.sets.map((s) => `<div style="margin-top:8px">${totoBalls(s.numbers, false, L.draw.nums, L.draw.add)}
+          <span class="prize-tag${s.prize ? " won" : ""}">${s.result.matched} matched${s.result.additional ? " + add" : ""}${s.prize ? " · " + s.prize + (s.result.amount ? " " + money(s.result.amount) : "") : ""}</span></div>`).join("");
+    } else {
+      body = `<p><b>${longDate(L.date)}</b></p>` + L.sets.map((s) =>
+        `<div style="margin-top:6px"><span class="digits" style="font-size:18px">${s.numbers}</span>
+          <span class="prize-tag${s.prize ? " won" : ""}">${s.prize ? "won: " + s.prize : "no prize"}</span></div>`).join("");
+    }
+    $(prefix + "l-body").innerHTML = body + recordLine(P.record, game);
+  }
+  renderPicks("toto", PK.toto, "t");
+  renderPicks("fourd", PK.fourd, "f");
+
+  // popularity chart
+  const POP = PK.popularity;
+  $("t-pop-note").textContent = (POP.source === "prior"
+    ? "Based on published lotto-player studies (birthdays 1–31 and lucky numbers are over-played)."
+    : `Estimated from ${POP.n} draws of Singapore Pools winning-share counts: when popular numbers are drawn, more people share the 3- and 4-number prizes. ` +
+      `The model explains ${fmt(POP.cv_gain * 100, 0)}% more variation than draw size alone (cross-validated), blended 70/30 with a birthday/lucky-number prior.`) +
+    " Taller = more players pick it. The Anti-popular set favours the short bars.";
+  W.chart($("c-pop"), () => {
+    const c = POP.coef.map((v) => (Math.exp(v) - 1) * 100);
+    const lo = Math.min(...c, 0) * 1.15, hi = Math.max(...c, 0) * 1.15;
+    return {
+      x: [0.4, 49.6], y: [lo, hi], height: 220, aria: "Estimated popularity of each TOTO number with players",
+      xTicks: intTicks(1, 49, 1).filter((t) => t.v === 1 || t.v % 4 === 0 || t.v === 49),
+      yTicks: W.niceTicks(lo, hi, 4, (v) => (v > 0 ? "+" : "") + fmt(v, 0) + "%"), xTitle: "number", yTitle: "relative popularity",
+      marks: [
+        { type: "rect", round: BAR_R, hitBand: true, items: c.map((v, i) => ({
+          x0: i + 1 - 0.36, x1: i + 1 + 0.36, y0: 0, y1: v, color: v >= 0 ? "var(--div-pos)" : "var(--div-neg)",
+          tip: `<b>Number ${i + 1}</b><br>${v >= 0 ? "More" : "Less"} popular than average: ${v >= 0 ? "+" : ""}${fmt(v, 1)}%` +
+            `${i < 31 ? "<br>Within 1–31 (birthday range)" : ""}`,
+        })) },
+        { type: "hline", y: 0, color: "var(--text-3)", width: 1 },
+      ],
+      legend: [{ label: "picked more often", color: "var(--div-pos)" }, { label: "picked less often", color: "var(--div-neg)" }],
+    };
+  });
+
+  // ================================================================ LUCK: stored picks vs actual draws
+  const LENS_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+  function binomCdf(k, n, p) { // P(X <= k)
+    if (k < 0) return 0;
+    let pmf = Math.pow(1 - p, n), cdf = pmf;
+    for (let i = 1; i <= Math.min(k, n); i++) { pmf *= ((n - i + 1) / i) * (p / (1 - p)); cdf += pmf; }
+    return Math.min(1, cdf);
+  }
+
+  function luckSection(game, prefix) {
+    const isToto = game === "toto";
+    const G = PK[game], H = G.history;
+    const pAny = isToto ? PK.p_toto_any : PK.p_4d_any;
+    const card = $(prefix + "k-tiles").closest(".card");
+    if (!H.length) {
+      $(prefix + "k-tiles").innerHTML = `<p class="muted" style="grid-column:1/-1">Your record starts after ${G.next ? longDate(G.next.date) : "the next draw"}. ` +
+        `Each morning after a draw, the picks are scored against the actual result and this section fills in.</p>`;
+      card.querySelector(".luck-grid").hidden = true;
+      const wrap = $(prefix + "k-table").parentElement;  // .table-scroll
+      wrap.hidden = true;
+      if (wrap.previousElementSibling) wrap.previousElementSibling.hidden = true;
+      return;
+    }
+    const lensNames = H[H.length - 1].sets.map((s) => s.lens);
+    const sets = H.flatMap((h) => h.sets);
+    const n = sets.length, prizes = sets.filter((s) => s.amount > 0).length;
+    const won = sets.reduce((a, s) => a + s.amount, 0), exp = n * pAny;
+    const pct = binomCdf(prizes - 1, n, pAny) * 100;
+    const pAtLeast = 1 - binomCdf(prizes - 1, n, pAny);
+    $(prefix + "k-tiles").innerHTML = `
+      <div><div class="v">${fmt(n)}</div><div class="l">${isToto ? "sets" : "numbers"} over ${fmt(H.length)} draw${H.length === 1 ? "" : "s"}</div></div>
+      <div><div class="v">${fmt(prizes)} <span class="muted" style="font-size:14px">vs ${fmt(exp, 2)}</span></div><div class="l">prizes won vs expected for random tickets</div></div>
+      <div><div class="v">${fmt(pct, 0)}%</div><div class="l">luck percentile: random players who'd have won fewer prizes (P(≥${prizes}) = ${fmtP(pAtLeast)})</div></div>
+      <div><div class="v">${won - n >= 0 ? "+" : "−"}$${fmt(Math.abs(won - n))}</div><div class="l">net: won $${fmt(won)} on $${fmt(n)} spent</div></div>`;
+
+    $(prefix + "k-dist-title").textContent = isToto
+      ? "Winning numbers matched per set vs expected (3+ wins a prize)"
+      : "Closest near-miss: most digits in the right position vs any of the 23 winning numbers";
+    W.chart($("c-" + prefix + "k-dist"), () => {
+      const pmf = isToto ? PK.toto_match_pmf : PK.fourd_best_pmf;
+      const obs = pmf.map((_, k) => sets.filter((s) => (isToto ? s.matched : s.best_match) === k).length);
+      return observedVsExpected(pmf.map((_, k) => String(k)), obs, pmf.map((p) => p * n),
+        { xTitle: isToto ? "numbers matched" : "digits in the right position (4 = exact hit)", yTitle: isToto ? "sets" : "numbers" });
+    });
+
+    W.chart($("c-" + prefix + "k-pnl"), () => {
+      const cum = lensNames.map(() => [0]);
+      H.forEach((h) => h.sets.forEach((s, i) => { const c = cum[i]; if (c) c.push(c[c.length - 1] + s.amount - 1); }));
+      const vals = cum.flat();
+      const lo = Math.min(...vals, 0), hi = Math.max(...vals, 0);
+      const pad = Math.max((hi - lo) * 0.08, 1);
+      const step = Math.max(1, Math.ceil(H.length / 6));
+      return {
+        x: [0, Math.max(H.length, 1)], y: [lo - pad, hi + pad], height: 260, aria: "Running profit and loss per lens",
+        xTicks: H.map((h, i) => ({ v: i + 1, label: h.date.slice(5) })).filter((_, i) => i % step === 0),
+        yTicks: W.niceTicks(lo - pad, hi + pad, 5, (v) => {
+          const a = Math.abs(v), sgn = v < 0 ? "−$" : "$";
+          return sgn + (a >= 1e6 ? fmt(a / 1e6, 1) + "M" : a >= 1e4 ? fmt(a / 1e3, 0) + "k" : fmt(a));
+        }), yTitle: "net $",
+        marks: [
+          { type: "hline", y: 0, color: "var(--text-3)", width: 1 },
+          ...cum.map((c, i) => ({ type: "line", points: c.map((v, k) => [k, v]), color: LENS_COLORS[i], width: 2, dots: H.length <= 30,
+            tips: i === 0 ? c.map((_, k) => `<b>${k ? H[k - 1].date : "Start"}</b><br>` +
+              lensNames.map((l, j) => `${l}: ${cum[j][k] < 0 ? "−$" : "$"}${fmt(Math.abs(cum[j][k]))}`).join("<br>")) : null })),
+        ],
+        legend: lensNames.map((l, i) => ({ label: l, color: LENS_COLORS[i], kind: "line" })),
+      };
+    });
+
+    const rows = H.slice().reverse().map((h) => {
+      const actual = isToto
+        ? `${totoBalls(h.nums, false)} <span class="ball add">${h.add}</span>`
+        : `<span class="digits" style="font-size:16px">${h.first || "–"}</span><div class="muted">1st prize (all 23 checked)</div>`;
+      const cells = h.sets.map((s) => {
+        const tag = s.amount > 0
+          ? `<span class="prize-tag won">${isToto ? "Group " + s.group : s.category} · ${money(s.amount)}</span>`
+          : `<span class="prize-tag">${isToto ? s.matched + (s.add ? " + add" : "") + " matched" : s.best_match + "/4 vs " + s.closest + " (" + s.closest_cat + ")"}</span>`;
+        const nums = isToto ? totoBalls(s.numbers, false, h.nums, h.add)
+          : `<span class="digits" style="font-size:16px">${[...s.numbers].map((ch, i) => s.closest && s.closest[i] === ch ? `<span class="digit-hit">${ch}</span>` : ch).join("")}</span>`;
+        return `<td>${nums}<div>${tag}</div></td>`;
+      }).join("");
+      return `<tr><td>${h.date}<div class="muted">Draw ${h.no}</div></td><td>${actual}</td>${cells}</tr>`;
+    }).join("");
+    $(prefix + "k-table").innerHTML = `<thead><tr><th>Draw</th><th>Actual result</th>` +
+      lensNames.map((l, i) => `<th><span class="lg"><i style="--c:${LENS_COLORS[i]}"></i>${l}</span></th>`).join("") + `</tr></thead><tbody>${rows}</tbody>`;
+  }
+  luckSection("toto", "t");
+  luckSection("fourd", "f");
+
+  W.renderAll();
+})();
+</script>
+</body>
+</html>

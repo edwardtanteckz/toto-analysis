@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Post a Slack alert one working day before the next TOTO draw.
+"""Send a Telegram/Slack alert one working day before the next TOTO draw.
 
     python toto_alert.py            # post only if today is the working day before the draw
     python toto_alert.py --dry-run  # print what would happen, post nothing
@@ -8,30 +8,16 @@
 from __future__ import annotations
 
 import argparse
+import html
 import logging
-import os
 from datetime import date, timedelta
-from pathlib import Path
 
 import holidays
-import requests
 
 from analysis import picks
-from sgpools import db, scraper
+from sgpools import db, notify, scraper
 
 log = logging.getLogger("toto_alert")
-ENV_PATH = Path(__file__).resolve().parent / ".env"
-
-
-def load_env() -> None:
-    """Minimal .env loader (KEY=VALUE lines); real env vars win."""
-    if not ENV_PATH.exists():
-        return
-    for line in ENV_PATH.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
 
 
 def is_working_day(d: date) -> bool:
@@ -45,28 +31,23 @@ def previous_working_day(d: date) -> date:
     return d
 
 
-def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> str:
+ODDS_NOTE = (f"Odds per set: 1 in {picks.TOTO_ODDS:,} (same for every set). "
+             "Anti-popular only means fewer people to share a win with.")
+
+
+def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> notify.Message:
     prize = f"${nxt.est_jackpot:,}" if nxt.est_jackpot else (nxt.raw_jackpot or "n/a")
-    msg = (
-        f":8ball: *TOTO draw coming up*\n"
-        f"*Draw date:* {nxt.draw_date:%a, %d %b %Y}, 6.30pm\n"
-        f"*Est. Group 1 (grand) prize:* {prize}"
-    )
+    when = f"{nxt.draw_date:%a, %d %b %Y}, 6.30pm"
+    slack = f":8ball: *TOTO draw coming up*\n*Draw date:* {when}\n*Est. Group 1 (grand) prize:* {prize}"
+    tg = (f"🎱 <b>TOTO draw coming up</b>\n<b>Draw date:</b> {html.escape(when)}\n"
+          f"<b>Est. Group 1 (grand) prize:</b> {html.escape(prize)}")
     if sets:
-        msg += "\n\n*Picks for this draw*\n" + "\n".join(
-            f"{s['set_no']}. `{' '.join(f'{n:02d}' for n in s['numbers'])}`  _{s['lens']}_" for s in sets)
-        msg += f"\n_Odds per set: 1 in {picks.TOTO_ODDS:,} (same for every set). Anti-popular only means fewer people to share a win with._"
-    return msg
-
-
-def post_slack(text: str) -> None:
-    load_env()
-    url = os.environ.get("SLACK_WEBHOOK_URL")
-    if not url:
-        raise RuntimeError(f"SLACK_WEBHOOK_URL is not set (add it to {ENV_PATH})")
-    r = requests.post(url, json={"text": text}, timeout=20)
-    if r.status_code != 200:
-        raise RuntimeError(f"Slack webhook returned HTTP {r.status_code}: {r.text[:200]}")
+        nums = lambda s: " ".join(f"{n:02d}" for n in s["numbers"])
+        slack += "\n\n*Picks for this draw*\n" + "\n".join(
+            f"{s['set_no']}. `{nums(s)}`  _{s['lens']}_" for s in sets) + f"\n_{ODDS_NOTE}_"
+        tg += "\n\n<b>Picks for this draw</b>\n" + "\n".join(
+            f"{s['set_no']}. <code>{nums(s)}</code>  <i>{html.escape(s['lens'])}</i>" for s in sets) + f"\n<i>{html.escape(ODDS_NOTE)}</i>"
+    return notify.Message(slack=slack, telegram=tg)
 
 
 def run(today: date | None = None, dry_run: bool = False, force: bool = False) -> bool:
@@ -90,16 +71,17 @@ def run(today: date | None = None, dry_run: bool = False, force: bool = False) -
         due = force or (today == alert_day and not already)
         if dry_run:
             print(f"Next draw: {nxt.draw_date}  alert day: {alert_day}  today: {today}  "
-                  f"already sent: {bool(already)}  would send: {due}\n---\n{msg}")
+                  f"already sent: {bool(already)}  would send: {due}  channels: {notify.channels() or 'none'}\n"
+                  f"--- Telegram ---\n{msg.telegram}\n--- Slack ---\n{msg.slack}")
             return due
         if not due:
             return False
-        post_slack(msg)
+        sent_to = notify.send(msg)
         if not force:
             with conn:
                 conn.execute("INSERT OR REPLACE INTO alerts_sent VALUES (?,?,?)",
-                             (nxt.draw_date.isoformat(), db.now(), msg))
-        log.info("alert posted for draw %s", nxt.draw_date)
+                             (nxt.draw_date.isoformat(), db.now(), msg.telegram))
+        log.info("alert sent for draw %s via %s", nxt.draw_date, ", ".join(sent_to))
         return True
     finally:
         conn.close()

@@ -1,8 +1,7 @@
 .env
-data/*.db
+# The DB and report are committed (GitHub Actions saves them after each run); ignore SQLite temp files.
 data/*.db-*
 logs/
-reports/
 __pycache__/
 *.pyc
 .DS_Store

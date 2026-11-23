@@ -3,11 +3,12 @@
 Exploratory analysis of Singapore Pools **TOTO** (6/49) and **4D** results:
 
 - Scrapes public results from singaporepools.com.sg into SQLite (`data/sgpools.db`).
-- One daily **9:30am** macOS launchd job: fetches new draws, rebuilds the report, and posts a
-  **Slack DM alert one working day before each TOTO draw** (date + estimated Group 1 prize).
+- One daily **9:30am SGT** job on **GitHub Actions** (`.github/workflows/daily.yml`): fetches new draws,
+  rebuilds the report, commits the DB + report back to the repo, and sends a **Telegram (and/or Slack)
+  alert one working day before each TOTO draw** (date + estimated Group 1 prize).
   Weekends and Singapore public holidays are skipped (Mon draw → Fri alert, Thu draw → Wed alert).
 - **Pre-draw picks**: 3 TOTO sets and 3 4D numbers for every draw, shown at the top of each report tab
-  (TOTO sets are also in the Slack alert). Generated once per draw, then scored against the result:
+  (TOTO sets are also in the alert). Generated once per draw, then scored against the result:
   - TOTO: *Anti-popular* (avoids numbers other players favour, estimated from Singapore Pools winning-share
     counts, so a win is shared with fewer people), *Typical profile*, *Bayesian posterior*.
   - 4D: *Most common pattern*, *Bayesian digit posterior*, *Pure random*.
@@ -30,11 +31,11 @@ Exploratory analysis of Singapore Pools **TOTO** (6/49) and **4D** results:
 pip install -r requirements.txt
 python update_db.py --backfill-years 2     # first load (~10 min, 1 request/sec)
 python eda_report.py --open                # build + open reports/eda.html
-cp .env.example .env && chmod 600 .env     # then paste your Slack webhook URL
+cp .env.example .env && chmod 600 .env     # local runs only: Telegram and/or Slack settings
 python make_picks.py --show                # picks for the next TOTO and 4D draws
 python toto_alert.py --dry-run             # see when the next alert would fire
 python toto_alert.py --force               # send a test message now
-./scripts/install_launchd.sh               # install the 9:30am daily job
+./scripts/install_launchd.sh               # optional: run locally via launchd instead of GitHub Actions
 ```
 
 ## Files
@@ -44,12 +45,14 @@ python toto_alert.py --force               # send a test message now
 | `sgpools/scraper.py` | Draw lists, TOTO/4D result pages, next-draw jackpot estimate |
 | `sgpools/db.py` | SQLite schema + idempotent inserts |
 | `update_db.py` | Backfill / incremental update |
-| `toto_alert.py` | Working-day-before alert to Slack (deduped via `alerts_sent`) |
+| `toto_alert.py` | Working-day-before TOTO alert (deduped via `alerts_sent`) |
+| `sgpools/notify.py` | Telegram + Slack sender; `python -m sgpools.notify --test` / `--chat-id` |
 | `analysis/picks.py`, `make_picks.py` | Pre-draw picks, popularity model, scoring past picks |
-| `run_daily.py` | launchd entrypoint: update → score/generate picks → rebuild report → alert; posts errors to Slack |
+| `run_daily.py` | Daily entrypoint: update → score/generate picks → rebuild report → alert; sends errors as a notification |
 | `analysis/stats.py` | Monte Carlo, Dirichlet–multinomial, randomness tests |
 | `eda_report.py`, `web/` | Report builder; dependency-free WebGL charts (`web/charts.js`) |
-| `launchd/`, `scripts/install_launchd.sh` | macOS scheduling |
+| `.github/workflows/daily.yml` | GitHub Actions schedule (09:30 SGT) |
+| `launchd/`, `scripts/install_launchd.sh` | Optional local macOS scheduling |
 
 ## Database tables
 
@@ -60,7 +63,22 @@ python toto_alert.py --force               # send a test message now
 sqlite3 data/sgpools.db "SELECT draw_date, n1,n2,n3,n4,n5,n6, additional, group1_prize FROM toto_draws ORDER BY draw_no DESC LIMIT 5"
 ```
 
-## Scheduling
+## Scheduling (GitHub Actions)
+
+The workflow runs daily at 01:30 UTC (09:30 Singapore; GitHub can start scheduled runs a few minutes late).
+After each run it commits `data/sgpools.db` and `reports/eda.html` back to `main`, so **`git pull` before
+looking at the report or running anything locally**. Download the latest report from the repo, or from
+the run's `eda-report` artifact.
+
+Secrets (repo **Settings → Secrets and variables → Actions**): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
+optional `SLACK_WEBHOOK_URL`.
+
+Manual runs: **Actions → Daily TOTO/4D job → Run workflow**, mode `test-notification`, `dry-run-alert` or `daily`.
+Or from a terminal: `gh workflow run daily.yml -f mode=test-notification`.
+
+Don't run the local launchd job at the same time: two copies of the DB would drift apart.
+
+### Local alternative (launchd)
 
 ```bash
 launchctl kickstart gui/$UID/com.toto.daily   # run now

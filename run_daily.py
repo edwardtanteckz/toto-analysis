@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily 9:30am job (launchd): update DB, score/generate picks, rebuild the EDA report, run the TOTO alert."""
+"""Daily 9:30am SGT job (GitHub Actions or launchd): update DB, score/generate picks, rebuild the EDA report, run the TOTO alert."""
 from __future__ import annotations
 
 import logging
@@ -9,7 +9,7 @@ import eda_report
 import toto_alert
 import update_db
 from analysis import picks
-from sgpools import db
+from sgpools import db, notify
 
 log = logging.getLogger("run_daily")
 
@@ -52,7 +52,7 @@ def main() -> None:
 
     if errors:
         try:
-            toto_alert.post_slack(":warning: TOTO daily job had errors:\n```" + "\n".join(errors)[:2500] + "```")
+            notify.send_text("⚠️ TOTO daily job had errors:\n" + "\n".join(errors)[:2500])
         except Exception:
             log.exception("could not post failure notice")
         raise SystemExit(1)
