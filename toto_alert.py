@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import html
 import logging
+import os
 from datetime import date, timedelta
 
 import holidays
@@ -35,6 +36,18 @@ ODDS_NOTE = (f"Odds per set: 1 in {picks.TOTO_ODDS:,} (same for every set). "
              "Anti-popular only means fewer people to share a win with.")
 
 
+def report_url() -> str | None:
+    """Public EDA report: REPORT_URL if set, else the repo's GitHub Pages URL when running on Actions."""
+    notify.load_env()
+    if os.environ.get("REPORT_URL"):
+        return os.environ["REPORT_URL"]
+    repo = os.environ.get("GITHUB_REPOSITORY")  # "owner/name", set by GitHub Actions
+    if repo and "/" in repo:
+        owner, name = repo.split("/", 1)
+        return f"https://{owner.lower()}.github.io/{name}/"
+    return None
+
+
 def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> notify.Message:
     prize = f"${nxt.est_jackpot:,}" if nxt.est_jackpot else (nxt.raw_jackpot or "n/a")
     when = f"{nxt.draw_date:%a, %d %b %Y}, 6.30pm"
@@ -47,6 +60,10 @@ def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> not
             f"{s['set_no']}. `{nums(s)}`  _{s['lens']}_" for s in sets) + f"\n_{ODDS_NOTE}_"
         tg += "\n\n<b>Picks for this draw</b>\n" + "\n".join(
             f"{s['set_no']}. <code>{nums(s)}</code>  <i>{html.escape(s['lens'])}</i>" for s in sets) + f"\n<i>{html.escape(ODDS_NOTE)}</i>"
+    url = report_url()
+    if url:
+        slack += f"\n\n<{url}|:bar_chart: View the EDA report>"
+        tg += f'\n\n📊 <a href="{html.escape(url, quote=True)}">View the EDA report</a>'
     return notify.Message(slack=slack, telegram=tg)
 
 

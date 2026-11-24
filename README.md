@@ -68,12 +68,12 @@ sqlite3 data/sgpools.db "SELECT draw_date, n1,n2,n3,n4,n5,n6, additional, group1
 The workflow runs daily at 01:30 UTC (09:30 Singapore; GitHub can start scheduled runs a few minutes late).
 After each run it commits `data/sgpools.db` and `reports/eda.html` back to `main`, so **`git pull` before
 looking at the report or running anything locally**. Download the latest report from the repo, or from
-the run's `eda-report` artifact.
+the published page **https://edwardtanteckz.github.io/toto-analysis/** (GitHub Pages, updated by every daily run and linked from the TOTO alert).
 
 Secrets (repo **Settings → Secrets and variables → Actions**): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
 optional `SLACK_WEBHOOK_URL`.
 
-Manual runs: **Actions → Daily TOTO/4D job → Run workflow**, mode `test-notification`, `dry-run-alert` or `daily`.
+Manual runs: **Actions → Daily TOTO/4D job → Run workflow**, mode `test-notification`, `test-alert` (sends the real alert now), `dry-run-alert` or `daily`.
 Or from a terminal: `gh workflow run daily.yml -f mode=test-notification`.
 
 Don't run the local launchd job at the same time: two copies of the DB would drift apart.

@@ -12,10 +12,13 @@ on:
         options:
           - daily              # full job: update DB, picks, report, TOTO alert if due
           - test-notification  # just send a test message to Telegram/Slack
+          - test-alert         # send the real TOTO alert now (not recorded as sent)
           - dry-run-alert      # update + show the alert without sending it
 
 permissions:
   contents: write                 # commit the updated DB + report back to the repo
+  pages: write                    # publish the report to GitHub Pages
+  id-token: write
 
 concurrency:
   group: daily-job
@@ -25,6 +28,9 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       TZ: Asia/Singapore          # date logic (alert day, next 4D draw) uses Singapore time
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -45,6 +51,10 @@ jobs:
         if: inputs.mode == 'test-notification'
         run: python -m sgpools.notify --test
 
+      - name: Send the real TOTO alert now (test)
+        if: inputs.mode == 'test-alert'
+        run: python toto_alert.py --force
+
       - name: Update DB and show alert (no send)
         if: inputs.mode == 'dry-run-alert'
         run: |
@@ -56,7 +66,7 @@ jobs:
         run: python run_daily.py
 
       - name: Save DB and report to the repo
-        if: always() && inputs.mode != 'test-notification'
+        if: always() && (github.event_name == 'schedule' || inputs.mode == 'daily' || inputs.mode == 'dry-run-alert')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -66,11 +76,21 @@ jobs:
           git pull --rebase --autostash
           git push
 
-      - name: Upload report
-        if: always() && inputs.mode != 'test-notification'
-        uses: actions/upload-artifact@v4
+      - name: Prepare Pages site
+        id: site
+        if: always() && hashFiles('reports/eda.html') != '' && (github.event_name == 'schedule' || inputs.mode == 'daily' || inputs.mode == 'dry-run-alert')
+        run: |
+          mkdir -p _site
+          cp reports/eda.html _site/index.html
+          touch _site/.nojekyll
+
+      - name: Upload Pages artifact
+        if: always() && steps.site.outcome == 'success'
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: eda-report
-          path: reports/eda.html
-          retention-days: 30
-          if-no-files-found: ignore
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: always() && steps.site.outcome == 'success'
+        uses: actions/deploy-pages@v4
