@@ -2,7 +2,11 @@ name: Daily TOTO/4D job
 
 on:
   schedule:
-    - cron: "30 1 * * *"          # 01:30 UTC = 09:30 Singapore (GitHub may start it some minutes late)
+    # GitHub often delays or drops runs at busy times (top/half of the hour), so use off-peak minutes
+    # plus a backup run. The job is idempotent and the alert is recorded once sent, so a second run
+    # never sends a duplicate.
+    - cron: "23 1 * * *"          # 09:23 Singapore (main run)
+    - cron: "47 2 * * *"          # 10:47 Singapore (backup if the main run was skipped/late)
   workflow_dispatch:
     inputs:
       mode:
@@ -15,11 +19,6 @@ on:
           - test-alert         # send the real TOTO alert now (not recorded as sent)
           - dry-run-alert      # update + show the alert without sending it
 
-permissions:
-  contents: write                 # commit the updated DB + report back to the repo
-  pages: write                    # publish the report to GitHub Pages
-  id-token: write
-
 concurrency:
   group: daily-job
   cancel-in-progress: false
@@ -28,18 +27,19 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write             # commit the updated DB + report back to the repo
+    outputs:
+      publish: ${{ steps.site.outcome == 'success' }}
     env:
       TZ: Asia/Singapore          # date logic (alert day, next 4D draw) uses Singapore time
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}   # optional
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -86,11 +86,24 @@ jobs:
 
       - name: Upload Pages artifact
         if: always() && steps.site.outcome == 'success'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
+  # Separate job (GitHub's recommended pattern): only runs that built the report create a Pages
+  # deployment, and the artifact is fully registered before the deploy step looks for it.
+  deploy:
+    needs: run
+    if: always() && needs.run.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        if: always() && steps.site.outcome == 'success'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

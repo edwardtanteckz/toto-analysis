@@ -65,7 +65,7 @@ sqlite3 data/sgpools.db "SELECT draw_date, n1,n2,n3,n4,n5,n6, additional, group1
 
 ## Scheduling (GitHub Actions)
 
-The workflow runs daily at 01:30 UTC (09:30 Singapore; GitHub can start scheduled runs a few minutes late).
+The workflow runs daily at 09:23 Singapore, with a backup run at 10:47 (GitHub sometimes delays or skips scheduled runs). Both are safe to run: the alert is recorded once sent, and a late run still alerts any time up to 6.30pm on draw day.
 After each run it commits `data/sgpools.db` and `reports/eda.html` back to `main`, so **`git pull` before
 looking at the report or running anything locally**. Download the latest report from the repo, or from
 the published page **https://edwardtanteckz.github.io/toto-analysis/** (GitHub Pages, updated by every daily run and linked from the TOTO alert).

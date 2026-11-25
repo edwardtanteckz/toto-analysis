@@ -11,7 +11,7 @@ import argparse
 import html
 import logging
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 import holidays
 
@@ -67,9 +67,21 @@ def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> not
     return notify.Message(slack=slack, telegram=tg)
 
 
-def run(today: date | None = None, dry_run: bool = False, force: bool = False) -> bool:
+DRAW_TIME = time(18, 30)
+
+
+def in_alert_window(now: datetime, draw_date: date) -> bool:
+    """From the working day before the draw until draw time. A late or skipped run still alerts."""
+    today = now.date()
+    if today < previous_working_day(draw_date) or today > draw_date:
+        return False
+    return today < draw_date or now.time() < DRAW_TIME
+
+
+def run(today: date | None = None, dry_run: bool = False, force: bool = False, now: datetime | None = None) -> bool:
     """Returns True if an alert was (or, in dry-run, would be) sent."""
-    today = today or date.today()
+    now = now or (datetime.combine(today, time(9, 30)) if today else datetime.now())
+    today = now.date()
     nxt = scraper.fetch_next_toto()
     alert_day = previous_working_day(nxt.draw_date)
     log.info("next draw %s, alert day %s, today %s", nxt.draw_date, alert_day, today)
@@ -85,7 +97,7 @@ def run(today: date | None = None, dry_run: bool = False, force: bool = False) -
             sets = None
         msg = format_message(nxt, sets)
         already = conn.execute("SELECT 1 FROM alerts_sent WHERE draw_date=?", (nxt.draw_date.isoformat(),)).fetchone()
-        due = force or (today == alert_day and not already)
+        due = force or (in_alert_window(now, nxt.draw_date) and not already)
         if dry_run:
             print(f"Next draw: {nxt.draw_date}  alert day: {alert_day}  today: {today}  "
                   f"already sent: {bool(already)}  would send: {due}  channels: {notify.channels() or 'none'}\n"
