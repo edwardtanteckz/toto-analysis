@@ -48,7 +48,12 @@ def report_url() -> str | None:
     return None
 
 
-def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> notify.Message:
+FOURD_ODDS_NOTE = (f"4D odds per number (Big bet): any prize 1 in {1 / picks.P_4D_ANY:.0f}, "
+                   "1st prize 1 in 10,000 (same for every number).")
+
+
+def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None,
+                   fourd: tuple[date, list[dict]] | None = None) -> notify.Message:
     prize = f"${nxt.est_jackpot:,}" if nxt.est_jackpot else (nxt.raw_jackpot or "n/a")
     when = f"{nxt.draw_date:%a, %d %b %Y}, 6.30pm"
     slack = f":8ball: *TOTO draw coming up*\n*Draw date:* {when}\n*Est. Group 1 (grand) prize:* {prize}"
@@ -60,6 +65,14 @@ def format_message(nxt: scraper.NextToto, sets: list[dict] | None = None) -> not
             f"{s['set_no']}. `{nums(s)}`  _{s['lens']}_" for s in sets) + f"\n_{ODDS_NOTE}_"
         tg += "\n\n<b>Picks for this draw</b>\n" + "\n".join(
             f"{s['set_no']}. <code>{nums(s)}</code>  <i>{html.escape(s['lens'])}</i>" for s in sets) + f"\n<i>{html.escape(ODDS_NOTE)}</i>"
+    if fourd and fourd[1]:
+        d, fsets = fourd
+        fwhen = f"{d:%a, %d %b %Y}, 6.30pm"
+        slack += f"\n\n:1234: *4D picks* for {fwhen}\n" + "\n".join(
+            f"{s['set_no']}. `{s['numbers']}`  _{s['lens']}_" for s in fsets) + f"\n_{FOURD_ODDS_NOTE}_"
+        tg += f"\n\n🔢 <b>4D picks</b> for {html.escape(fwhen)}\n" + "\n".join(
+            f"{s['set_no']}. <code>{html.escape(s['numbers'])}</code>  <i>{html.escape(s['lens'])}</i>" for s in fsets) + \
+            f"\n<i>{html.escape(FOURD_ODDS_NOTE)}</i>"
     url = report_url()
     if url:
         slack += f"\n\n<{url}|:bar_chart: View the EDA report>"
@@ -95,7 +108,14 @@ def run(today: date | None = None, dry_run: bool = False, force: bool = False, n
         except Exception:
             log.exception("could not load picks; sending alert without them")
             sets = None
-        msg = format_message(nxt, sets)
+        try:
+            fourd_date = picks.next_fourd_date(now)
+            picks.ensure(conn, "fourd", fourd_date)
+            fourd = (fourd_date, picks.get_picks(conn, "fourd", fourd_date))
+        except Exception:
+            log.exception("could not load 4D picks; sending alert without them")
+            fourd = None
+        msg = format_message(nxt, sets, fourd)
         already = conn.execute("SELECT 1 FROM alerts_sent WHERE draw_date=?", (nxt.draw_date.isoformat(),)).fetchone()
         due = force or (in_alert_window(now, nxt.draw_date) and not already)
         if dry_run:
